@@ -1,5 +1,33 @@
 # Larpy — what changed
 
+## Today header, one-tap theme, and scenes instead of names — 6 September 2026
+
+- The tokens number moved clear of the status bar and grew; the `tokens loaded · N pages · N lesson`
+  line under it is gone, so the header is one label and one number.
+- Today fits one screen again on a 6.3" phone: the Work row sits fully above the tab bar.
+- A **moon / sun button in the header** flips light and dark in one tap. It writes the same
+  `isDark` preference the Settings picker always used, so the two stay in sync.
+- **No real person is named anywhere in the app.** The 54 looks keep their clothes and their
+  colours, and their stored IDs, so earned history still resolves. What the UI shows is the
+  clothes plus the scene: "Rollneck · One spot, one take". The alternate app icon is "Rollneck".
+  Settings costumes are Hoodie / Rollneck / Gym tee / Collar. `strings` on the built binary
+  returns no founder name.
+- **Fourteen original scene backdrops** replace the flat cream disc behind Larpy: a road at dusk,
+  a rain-lit street, a late booth, a rooftop, a field, a gym, a trading floor, a server aisle,
+  an orbit, a summit, a spotlit stage, a platform, a snowed-in window, an open sea. They are drawn
+  from scratch with the app's own shapes — no film is named, no still is reproduced, no character
+  is depicted. One warm ground and one saturated accent each, so the set reads as one system.
+- The stage geometry is now adaptive. `stageRatio` decides how much wider the scene circle is than
+  the actor, and the ground line is derived from the actor's feet, so Today can give the scene room
+  while the smaller stages in Week, Settings, onboarding and the share card keep their old framing.
+
+### Checked
+
+- Simulator build of app, widget and share extension: succeeded.
+- 30 receipt-gate and compatibility checks: pass.
+- Running app on the Larpy QA simulator: Today in light and dark, Week, and the characters grid.
+- Not checked: the widget and share extension on a signed device, and any cross-phone sync.
+
 ## Direction
 
 Larpy is the character you put on, backed by receipts. Cream paper, a living cream egg, a sharp line, three simple actions. The latest names are **Body / Learnt / Work**. “Ship” remains a verb in the voice; Work is the lane for something that left the building.

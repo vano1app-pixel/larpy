@@ -1,4 +1,16 @@
-# Current — 5 September 2026
+# Current — 6 September 2026
+
+Today's header is one label and one number, the theme flips from a header button, and the
+character now stands in one of fourteen original scenes. **Nobody real is named in the app.**
+Read **CHANGES.md** for what was verified.
+
+Next, unchanged: one-friend sync, a real universal-link domain, App Groups on a signed device.
+
+---
+
+## Previous handover — history, superseded where it differs
+
+# 5 September 2026
 
 The latest product names are **Body / Learnt / Work**. Today, the cream actor, 54 original founder-inspired looks, receipt gates, achievements, People simplification, and share/widget hooks are implemented. Read **CHANGES.md** for what is actually working and the verification evidence.
 

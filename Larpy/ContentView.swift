@@ -573,6 +573,19 @@ enum Kit: String, CaseIterable, Identifiable {
         case .cans: "Cans"
         }
     }
+    /// One word, for the wardrobe grid where the scene carries the rest of the line.
+    var shortLabel: String {
+        switch self {
+        case .bare: "Bare"
+        case .hoodie: "Hoodie"
+        case .tee: "Tee"
+        case .rollneck: "Rollneck"
+        case .glasses: "Glasses"
+        case .cap: "Cap"
+        case .collar: "Collar"
+        case .cans: "Cans"
+        }
+    }
 }
 
 let lockableApps = ["Instagram", "TikTok", "X", "YouTube", "Reddit", "Snapchat", "Netflix", "Safari"]
@@ -584,10 +597,10 @@ enum Costume: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .none: "None"
-        case .cursor: "Cursor kid"
-        case .jobs: "Jobs"
-        case .hormozi: "Hormozi"
-        case .belfort: "Belfort"
+        case .cursor: "Hoodie"
+        case .jobs: "Rollneck"
+        case .hormozi: "Gym tee"
+        case .belfort: "Collar"
         }
     }
     var kit: Kit {
@@ -1191,40 +1204,52 @@ private struct TodayView: View {
     var body: some View {
         ScrollView {
                 VStack(spacing: 0) {
-                    HStack(alignment: .top) {
+                    HStack(alignment: .center) {
                         Button { prefillLoad = true; active = .learn } label: {
-                            VStack(alignment: .leading, spacing: 1) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 5) {
                                     Circle().fill(Palette.load).frame(width: 5, height: 5)
                                     Text("TOKENS TODAY").font(.system(size: 11, weight: .bold, design: .monospaced)).tracking(2)
                                 }.foregroundStyle(Palette.muted)
-                                Text(fmtTokens(loads.todayTokens)).font(.system(size: 38, weight: .medium, design: .rounded))
-                                    .tracking(-1.5).foregroundStyle(Palette.text).contentTransition(.numericText())
-                                Text(loads.todayDetail).font(.system(size: 12, weight: .medium)).foregroundStyle(Palette.muted)
+                                Text(fmtTokens(loads.todayTokens)).font(.system(size: 44, weight: .medium, design: .rounded))
+                                    .tracking(-1.8).foregroundStyle(Palette.text).contentTransition(.numericText())
+                                    .lineLimit(1).minimumScaleFactor(0.6)
                             }.frame(minHeight: 62, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityLabel("Tokens today, \(fmtTokens(loads.todayTokens)). Log learning.")
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 4) {
-                            GearButton(action: onSettings).frame(width: 44, height: 44)
+                        Spacer(minLength: 8)
+                        HStack(spacing: 2) {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.25)) { prefs.isDark.toggle() }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } label: {
+                                Image(systemName: prefs.isDark ? "sun.max.fill" : "moon.fill")
+                                    .font(.system(size: 17, weight: .medium)).foregroundStyle(Palette.muted)
+                                    .frame(width: 44, height: 44).contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                                .accessibilityLabel(prefs.isDark ? "Switch to light" : "Switch to dark")
                             Button { renderShare(); showShare = true } label: {
-                                Label("Share", systemImage: "arrow.up.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.muted).frame(minWidth: 60, minHeight: 32)
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 17, weight: .medium)).foregroundStyle(Palette.muted)
+                                    .frame(width: 44, height: 44).contentShape(Rectangle())
                             }.buttonStyle(.plain).accessibilityLabel("Share today")
+                            GearButton(action: onSettings).frame(width: 44, height: 44)
                         }
-                    }.padding(.top, 8)
+                    }
+                    .padding(.top, 10)
 
                     Text("Keep Larpy alive.")
                         .font(.system(size: 32, weight: .medium, design: .serif)).tracking(-1.3)
                         .foregroundStyle(Palette.text).padding(.top, 14)
 
-                    let stageHeight: CGFloat = 245
+                    let stageHeight: CGFloat = 246
                     LarpyCharacterView(life: life, base: .cream, kit: sceneKit,
-                                       width: stageHeight / 1.46, interactive: true,
+                                       width: stageHeight / 1.95, stageRatio: 1.85, interactive: true,
                                        fedTick: feedSequence, fedLane: fedLane, level: stats.workN, founderID: founderID)
                         .frame(maxWidth: .infinity).frame(height: stageHeight)
                     Text(FounderLook.find(founderID)?.label.uppercased() ?? SceneWardrobe.caption(sceneKit, hungry: store.todayCount == 0))
                         .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.7)
                         .foregroundStyle(Palette.muted).padding(.top, 2)
-                        .frame(minHeight: 30).onTapGesture { showWardrobe = true }
+                        .frame(minHeight: 24).onTapGesture { showWardrobe = true }
 
                     VStack(spacing: 7) {
                         HStack {
@@ -1243,12 +1268,12 @@ private struct TodayView: View {
                             Spacer()
                             Text(stats.workN >= 7 ? "EARNED" : "NEXT AT \(ShipLevel.next(stats.workN))")
                         }.font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(Palette.muted)
-                    }.padding(.top, 18).padding(.horizontal, 5)
+                    }.padding(.top, 14).padding(.horizontal, 5)
 
                     Text(Voice.line(train: store.doneToday(.body), load: store.doneToday(.learn), ship: store.doneToday(.work), isEgg: store.logs.isEmpty, friendShipped: friendShipped))
                         .font(.system(size: 14, weight: .medium)).foregroundStyle(Palette.text)
                         .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 18)
+                        .padding(.vertical, 14)
 
                     VStack(spacing: 8) {
                         ForEach(QuestKind.allCases) { q in
@@ -2240,7 +2265,7 @@ enum LarpyIcon {
     static let all: [(id: String, label: String, asset: String)] = [
         ("", "Default", "LarpyPrimary"),
         ("LarpyHungry", "Hungry", "LarpyHungry"),
-        ("LarpyJobs", "Jobs", "LarpyJobs")
+        ("LarpyJobs", "Rollneck", "LarpyJobs")
     ]
 
     @MainActor
@@ -3011,6 +3036,9 @@ struct LarpyCharacterView: View {
     var kit: Kit = .bare
     var width: CGFloat = 220
     var showScene = true
+    /// How much wider the scene circle is than the actor. Today gives the scene room to read;
+    /// the smaller stages keep the tighter original framing so nothing overflows its card.
+    var stageRatio: CGFloat = 1.32
     var interactive = false
     var hatched = true // compatibility: the actor now has a face from the very first open
     var fedTick = 0
@@ -3034,7 +3062,7 @@ struct LarpyCharacterView: View {
         .onChange(of: fedTick) { _, _ in fedAt = .now }
         .onChange(of: kit) { _, _ in enteredAt = .now }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Larpy. \(hungry ? "Hungry" : "Fed"). \(founder?.name ?? Costume.from(kit: kit).label). \(ShipLevel.title(level)).")
+        .accessibilityLabel("Larpy. \(hungry ? "Hungry" : "Fed"). \(founder?.title ?? Costume.from(kit: kit).label). \(ShipLevel.title(level)).")
     }
 
     private func stage(at date: Date) -> some View {
@@ -3054,10 +3082,8 @@ struct LarpyCharacterView: View {
         let w = width
         return ZStack {
             if showScene {
-                Circle().fill(Color(hex: 0xF0E4CF))
-                    .frame(width: w * 1.32, height: w * 1.32)
-                    .opacity(Theme.isDark ? 1 : 0.55)
-                Ellipse().fill(Palette.ink.opacity(0.10))
+                (founder?.scene ?? MovieScene.forKit(kit)).backdrop(w: w, ratio: stageRatio)
+                Ellipse().fill(Palette.ink.opacity(0.18))
                     .frame(width: w * 0.85, height: w * 0.075)
                     .blur(radius: w * 0.018).offset(y: w * 0.58)
                 scenery(w: w, phase: phase)
@@ -3251,7 +3277,7 @@ private struct CurveLine: Shape {
         p.addQuadCurve(to: CGPoint(x: r.maxX, y: r.minY), control: CGPoint(x: r.midX, y: r.height * 2 * bend)); return p
     }
 }
-private struct Triangle: Shape {
+struct Triangle: Shape {
     func path(in r: CGRect) -> Path {
         var p = Path(); p.move(to: CGPoint(x: r.minX, y: r.minY)); p.addLine(to: CGPoint(x: r.midX, y: r.maxY)); p.addLine(to: CGPoint(x: r.maxX, y: r.minY)); p.closeSubpath(); return p
     }
