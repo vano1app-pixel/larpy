@@ -1,91 +1,96 @@
 import Combine
 import Foundation
+import UIKit
 
 @MainActor
 final class ProofStore: ObservableObject {
     @Published private(set) var logs: [ProofLog] = []
-
-    private let folderURL: URL
+    @Published var errorMessage: String?
+    private var storageUnreadable = false
     private let jsonURL: URL
     private let photosURL: URL
 
-    init(fileManager: FileManager = .default) {
-        let baseURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    init(fileManager: FileManager = .default, baseURL: URL? = nil) {
+        let folder = baseURL ?? fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Larpy", isDirectory: true)
-
-        folderURL = baseURL
-        jsonURL = baseURL.appendingPathComponent("proofs.json")
-        photosURL = baseURL.appendingPathComponent("ProofPhotos", isDirectory: true)
-
-        createFolders(fileManager: fileManager)
-        load()
+        jsonURL = folder.appendingPathComponent("proofs.json")
+        photosURL = folder.appendingPathComponent("ProofPhotos", isDirectory: true)
+        do {
+            try fileManager.createDirectory(at: photosURL, withIntermediateDirectories: true)
+            if fileManager.fileExists(atPath: jsonURL.path) {
+                logs = try JSONDecoder().decode([ProofLog].self, from: Data(contentsOf: jsonURL))
+                    .sorted { $0.createdAt > $1.createdAt }
+            }
+        } catch { storageUnreadable = true; errorMessage = "Your receipts couldn't be opened. Nothing has been overwritten." }
     }
 
     func latestLog(for quest: QuestKind) -> ProofLog? {
-        logs
-            .filter { $0.quest == quest }
-            .sorted { $0.createdAt > $1.createdAt }
-            .first
+        logs.first { $0.quest == quest && $0.isEligible }
     }
 
-    func logTextProof(quest: QuestKind, proofKind: ProofKind, value: String) {
-        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedValue.isEmpty else { return }
+    @discardableResult
+    func logTextProof(quest: QuestKind, proofKind: ProofKind, value: String, annotation: String? = nil,
+                      id: UUID = UUID(), createdAt: Date = .now) -> Bool {
+        guard quest != .body else { errorMessage = "Body needs a photo or a completed timer."; return false }
+        var value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return false }
+        if proofKind == .link {
+            guard let url = ReceiptRules.webURL(value) else { errorMessage = "Use a full web link to the thing."; return false }
+            value = url.absoluteString
+        }
+        guard quest != .work || proofKind == .link else { errorMessage = "A sentence is Load. Ship needs a link or screenshot."; return false }
+        return add(ProofLog(id: id, quest: quest, proofKind: proofKind, value: value,
+                            founderID: nextLook.id, costumeID: nextLook.kit.rawValue, annotation: annotation, createdAt: createdAt))
+    }
 
-        add(ProofLog(quest: quest, proofKind: proofKind, value: trimmedValue))
+    @discardableResult
+    func logTimer(start: Date, end: Date = .now, note: String = "") -> Bool {
+        let seconds = Int(end.timeIntervalSince(start))
+        guard seconds >= 60, end <= Date().addingTimeInterval(1), seconds <= 86_400 else {
+            errorMessage = "Give it a real minute. Timer receipts need at least 60 seconds."; return false
+        }
+        return add(ProofLog(quest: .body, proofKind: .number, value: "\(seconds / 60)m",
+                            founderID: nextLook.id, costumeID: nextLook.kit.rawValue, annotation: note, timerSeconds: seconds, createdAt: end))
     }
 
     func logPhotoProof(quest: QuestKind, imageData: Data) throws {
+        try logPhoto(quest: quest, imageData: imageData, value: "photo")
+    }
+    func logPhoto(quest: QuestKind, imageData: Data, value: String) throws {
+        guard let image = UIImage(data: imageData), let data = image.jpegData(compressionQuality: 0.82) else {
+            throw NSError(domain: "Larpy", code: 1, userInfo: [NSLocalizedDescriptionKey: "That image couldn't be read. Pick it again."])
+        }
         let filename = "\(UUID().uuidString).jpg"
         let fileURL = photosURL.appendingPathComponent(filename)
-        try imageData.write(to: fileURL, options: [.atomic])
-
-        add(
-            ProofLog(
-                quest: quest,
-                proofKind: .photo,
-                value: "Photo saved",
-                photoFilename: filename
-            )
-        )
+        try data.write(to: fileURL, options: [.atomic])
+        if !add(ProofLog(quest: quest, proofKind: .photo, value: value, photoFilename: filename, founderID: nextLook.id, costumeID: nextLook.kit.rawValue)) {
+            try? FileManager.default.removeItem(at: fileURL)
+            throw NSError(domain: "Larpy", code: 2, userInfo: [NSLocalizedDescriptionKey: errorMessage ?? "Receipt couldn't be saved."])
+        }
     }
-
     func photoURL(for log: ProofLog) -> URL? {
-        guard let filename = log.photoFilename else { return nil }
+        guard let filename = log.photoFilename, filename == (filename as NSString).lastPathComponent else { return nil }
         return photosURL.appendingPathComponent(filename)
     }
-
-    private func add(_ log: ProofLog) {
-        logs.insert(log, at: 0)
-        save()
-    }
-
-    private func load() {
-        guard let data = try? Data(contentsOf: jsonURL) else { return }
-
-        do {
-            logs = try JSONDecoder().decode([ProofLog].self, from: data)
-                .sorted { $0.createdAt > $1.createdAt }
-        } catch {
-            logs = []
+    private var nextLook: FounderLook { FounderLook.next(ordinal: logs.filter { $0.isEligible }.count) }
+    @discardableResult
+    private func add(_ log: ProofLog) -> Bool {
+        guard logs.contains(where: { $0.id == log.id }) == false else { return true }
+        guard !storageUnreadable else { errorMessage = "Your receipts couldn't be opened. Nothing has been overwritten."; return false }
+        // The same URL can be homework and output, but can't earn two Ships.
+        if log.quest == .work, log.proofKind == .link,
+           logs.contains(where: { $0.quest == .work && $0.proofKind == .link && $0.value.trimmingCharacters(in: CharacterSet(charactersIn: "/")) == log.value.trimmingCharacters(in: CharacterSet(charactersIn: "/")) }) {
+            errorMessage = "That Ship already has a receipt. Bring something new."; return false
         }
-    }
-
-    private func save() {
+        let next = ([log] + logs).sorted { $0.createdAt > $1.createdAt }
         do {
-            let data = try JSONEncoder().encode(logs)
-            try data.write(to: jsonURL, options: [.atomic])
+            try JSONEncoder().encode(next).write(to: jsonURL, options: [.atomic])
+            errorMessage = nil
+            logs = next
+            return true
         } catch {
-            assertionFailure("Could not save proof logs: \(error.localizedDescription)")
-        }
-    }
-
-    private func createFolders(fileManager: FileManager) {
-        do {
-            try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
-            try fileManager.createDirectory(at: photosURL, withIntermediateDirectories: true)
-        } catch {
-            assertionFailure("Could not create Larpy storage folders: \(error.localizedDescription)")
+            errorMessage = "Couldn't save the receipt. Keep this open and try again."
+            return false
         }
     }
 }
