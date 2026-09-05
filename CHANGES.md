@@ -1,5 +1,39 @@
 # Larpy — what changed
 
+## Full-width scenes, lane-driven rooms, and a room you have to earn — 6 September 2026
+
+- The stage is no longer a circle. Larpy stands in a **full-width rounded panel** that fills the
+  content width, with the scene drawn edge to edge behind him. The panel takes whatever frame its
+  parent gives it, and the ground line is derived from the actor's feet, so the character stands
+  correctly at any size. Scene furniture is placed against the panel width, not the actor, so it
+  spreads across the canvas instead of hiding behind him.
+- **The lane you fed last picks the room.** Body earns the outdoors and the gym. Learnt earns the
+  rooms full of other people's work. Work earns the rooms with an audience. Within a lane the look
+  decides which of its rooms you get, so two receipts in the same lane do not look identical.
+  `MovieScene.forToday` is the single place that decides, so Today and the share image never
+  disagree, and the caption under Larpy always names the room actually on screen.
+- **The share image is the scene.** The card carries the same full-width panel and the room's
+  caption, on a taller canvas so nothing clips.
+- **One room you cannot dress into.** `Somebody else's orbit` belongs to no costume. It shows in
+  the characters screen from day one, greyed and locked with a running count, and unlocks at seven
+  completed Work receipts. Once earned, logging Work again puts Larpy in it.
+- Debug-only screenshot hooks: `simctl launch <sim> com.larpy.app -openWardrobe` opens the
+  characters screen, `-openShare` renders the share card and writes it to Documents. Both are
+  inside `#if DEBUG` and never ship.
+
+### Checked
+
+- Simulator build of app, widget and share extension: succeeded.
+- 30 receipt-gate and compatibility checks: pass.
+- Running app: the road scene on an empty day, the diner after a Learnt receipt, and the orbit
+  after a Work receipt on a week already past seven. The characters screen showing the reward room
+  as earned. The rendered share card, pulled off the simulator as a PNG.
+- `strings` on the built binary still returns no real person's name.
+- Not checked: the theme button under an automated tap, because the simulator stopped accepting
+  synthetic clicks partway through. Both themes were verified by rendering, and the button writes
+  the same preference the Settings picker has always used.
+- The QA simulator's receipts were seeded to force those scenes and then restored from a backup.
+
 ## Today header, one-tap theme, and scenes instead of names — 6 September 2026
 
 - The tokens number moved clear of the status bar and grew; the `tokens loaded · N pages · N lesson`

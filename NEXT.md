@@ -1,4 +1,14 @@
-# Current — 6 September 2026
+# Current — 6 September 2026 (evening)
+
+Larpy stands in a full-width scene panel. The lane you fed last picks the room, the share image
+carries the same room, and one room is locked behind seven completed Work receipts. Nobody real
+is named. Read **CHANGES.md** for what was verified.
+
+Next, unchanged: one-friend sync, a real universal-link domain, App Groups on a signed device.
+
+---
+
+## Earlier on 6 September 2026
 
 Today's header is one label and one number, the theme flips from a header button, and the
 character now stands in one of fourteen original scenes. **Nobody real is named in the app.**

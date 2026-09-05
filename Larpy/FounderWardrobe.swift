@@ -81,6 +81,8 @@ struct WardrobeView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selected: FounderLook?
     private var unlocked: Set<String> { Set(store.logs.compactMap(\.founderID)) }
+    private var workDone: Int { store.logs.filter { $0.quest == .work && $0.isEligible }.count }
+    private var rewardEarned: Bool { workDone >= MovieScene.rewardAt }
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -88,6 +90,36 @@ struct WardrobeView: View {
                     Text("Become someone.\nThen bring receipts.").font(.system(size: 29, weight: .medium, design: .serif)).foregroundStyle(Palette.text)
                     Text("\(unlocked.count) of \(FounderLook.all.count) looks earned. Every receipt changes the clothes and the scene. Only Work changes the level.")
                         .font(.system(size: 15)).foregroundStyle(Palette.muted)
+                    // The one room no costume carries. Visible from the first day, locked until seven.
+                    VStack(alignment: .leading, spacing: 10) {
+                        ZStack {
+                            // No actor stands here, so the scale is set for the empty room.
+                            MovieScene.reward.panel(w: 78, corner: 20)
+                                .frame(height: 152)
+                                .saturation(rewardEarned ? 1 : 0.15)
+                                .opacity(rewardEarned ? 1 : 0.5)
+                            if !rewardEarned {
+                                VStack(spacing: 7) {
+                                    Image(systemName: "lock.fill").font(.system(size: 17, weight: .semibold))
+                                    Text("\(workDone) / \(MovieScene.rewardAt) completed Work")
+                                        .font(.system(size: 12, weight: .semibold, design: .monospaced)).tracking(0.6)
+                                }.foregroundStyle(Palette.text.opacity(0.85))
+                            }
+                        }
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(MovieScene.reward.title).font(.system(size: 17, weight: .semibold)).foregroundStyle(Palette.text)
+                            Spacer()
+                            Text(rewardEarned ? "EARNED" : "LOCKED")
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1)
+                                .foregroundStyle(rewardEarned ? Palette.gold : Palette.muted)
+                        }
+                        Text(rewardEarned
+                             ? "Yours. Log Work again and Larpy stands in it."
+                             : "No costume comes with this room. Seven completed Work receipts is the only way in.")
+                            .font(.system(size: 13)).foregroundStyle(Palette.muted)
+                    }
+                    .padding(.bottom, 4)
+
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                         ForEach(FounderLook.all) { look in
                             Button { selected = look } label: {
@@ -323,251 +355,304 @@ enum MovieScene: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Drawn inside the circular stage. `w` is the actor width, `ratio` how much wider the
-    /// stage is than the actor. The ground line is derived so it always meets the feet.
-    func backdrop(w: CGFloat, ratio: CGFloat) -> some View {
-        let d = w * ratio
-        let hz = d / 2 + w * 0.58
-        return ZStack {
-            LinearGradient(colors: [Color(hex: sky.0), Color(hex: sky.1)], startPoint: .top, endPoint: .bottom)
-            elements(d: d, hz: hz)
+    /// Drawn as a full-bleed panel behind the actor. `w` is the actor width and sets the scale;
+    /// the panel takes whatever frame its parent gives it. The ground line is derived from the
+    /// actor's feet so the character always stands on it, at any panel size.
+    func panel(w: CGFloat, corner: CGFloat = 26) -> some View {
+        GeometryReader { g in
+            let h = g.size.height
+            let d = w * 1.85                       // scale unit for the furniture
+            let hz = h / 2 + w * 0.58              // ground line, measured from the panel top
+            ZStack {
+                LinearGradient(colors: [Color(hex: sky.0), Color(hex: sky.1)], startPoint: .top, endPoint: .bottom)
+                elements(d: d, hz: hz, h: h, pw: g.size.width)
+            }
+            .frame(width: g.size.width, height: h)
         }
-        .frame(width: d, height: d)
-        .clipShape(Circle())
-        .overlay(Circle().fill(Color.black.opacity(Theme.isDark ? 0.30 : 0)))
-        .overlay(Circle().stroke(Palette.ink.opacity(Theme.isDark ? 0.30 : 0.08), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous).fill(Color.black.opacity(Theme.isDark ? 0.30 : 0)))
+        .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous).stroke(Palette.ink.opacity(Theme.isDark ? 0.32 : 0.09), lineWidth: 1))
     }
 
-    private func ground(_ d: CGFloat, _ hz: CGFloat) -> some View {
+    /// Ground line as an offset from the panel centre. Everything that stands on the floor uses it.
+    private func gy(_ hz: CGFloat, _ h: CGFloat) -> CGFloat { hz - h / 2 }
+
+    private func ground(_ h: CGFloat, _ hz: CGFloat) -> some View {
         Rectangle().fill(Color(hex: land))
-            .frame(height: max(0, d - hz))
+            .frame(height: max(0, h - hz))
             .offset(y: hz / 2)
     }
 
-    @ViewBuilder private func elements(d: CGFloat, hz: CGFloat) -> some View {
+    /// `d` scales the furniture, `pw` places it. The actor stands in the middle ~45% of the
+    /// panel, so everything that must stay visible sits outside that band or above the head.
+    @ViewBuilder private func elements(d: CGFloat, hz: CGFloat, h: CGFloat, pw: CGFloat) -> some View {
         switch self {
-        case .road: road(d, hz)
-        case .neon: neon(d, hz)
-        case .diner: diner(d, hz)
-        case .rooftop: rooftop(d, hz)
-        case .field: field(d, hz)
-        case .gym: gym(d, hz)
-        case .floor: floor(d, hz)
-        case .racks: racks(d, hz)
-        case .orbit: orbit(d, hz)
-        case .summit: summit(d, hz)
-        case .spotlight: spotlight(d, hz)
-        case .platform: platform(d, hz)
-        case .cabin: cabin(d, hz)
-        case .sea: sea(d, hz)
+        case .road: road(d, hz, h, pw)
+        case .neon: neon(d, hz, h, pw)
+        case .diner: diner(d, hz, h, pw)
+        case .rooftop: rooftop(d, hz, h, pw)
+        case .field: field(d, hz, h, pw)
+        case .gym: gym(d, hz, h, pw)
+        case .floor: floor(d, hz, h, pw)
+        case .racks: racks(d, hz, h, pw)
+        case .orbit: orbit(d, hz, h, pw)
+        case .summit: summit(d, hz, h, pw)
+        case .spotlight: spotlight(d, hz, h, pw)
+        case .platform: platform(d, hz, h, pw)
+        case .cabin: cabin(d, hz, h, pw)
+        case .sea: sea(d, hz, h, pw)
         }
     }
 
-    private func road(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            Circle().fill(Color(hex: accent).opacity(0.9))
-                .frame(width: d * 0.30, height: d * 0.30)
-                .offset(y: -d * 0.10)
-            ground(d, hz)
-            Triangle().fill(Color(hex: 0xF3E3C6).opacity(0.85))
-                .frame(width: d * 0.46, height: d * 0.22)
+    private func road(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            Circle().fill(Color(hex: accent).opacity(0.72))
+                .frame(width: d * 0.24, height: d * 0.24)
+                .offset(x: -pw * 0.36, y: g - d * 0.36)
+            ground(h, hz)
+            Triangle().fill(Color(hex: 0xF3E3C6).opacity(0.8))
+                .frame(width: pw * 0.78, height: d * 0.34)
                 .rotationEffect(.degrees(180))
-                .offset(y: hz - d / 2 + d * 0.11)
-        }
-    }
-
-    private func neon(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            ForEach(0..<3, id: \.self) { i in
-                let h: CGFloat = d * (0.24 - CGFloat(i) * 0.05)
-                RoundedRectangle(cornerRadius: d * 0.012)
-                    .fill(Color(hex: accent).opacity(0.8 - Double(i) * 0.18))
-                    .frame(width: d * 0.045, height: h)
-                    .offset(x: d * (CGFloat(i) * 0.24 - 0.34), y: -d * (0.16 - CGFloat(i) * 0.03))
+                .offset(y: g + d * 0.17)
+            ForEach(0..<2, id: \.self) { i in
+                Capsule().fill(Color(hex: land).opacity(0.6))
+                    .frame(width: pw * 0.16, height: d * 0.030)
+                    .offset(x: pw * (i == 0 ? -0.36 : 0.36), y: g - d * 0.015)
             }
-            ground(d, hz)
-            Rectangle().fill(Color(hex: accent).opacity(0.28))
-                .frame(width: d * 0.05, height: d * 0.18)
-                .offset(x: -d * 0.34, y: hz / 2 - d * 0.04)
-                .blur(radius: d * 0.02)
         }
     }
 
-    private func diner(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: d * 0.03).fill(Color(hex: accent).opacity(0.30))
-                .frame(width: d * 0.62, height: d * 0.40)
-                .offset(y: -d * 0.10)
-            RoundedRectangle(cornerRadius: d * 0.03).stroke(Color(hex: accent).opacity(0.65), lineWidth: d * 0.008)
-                .frame(width: d * 0.62, height: d * 0.40)
-                .offset(y: -d * 0.10)
-            ground(d, hz)
-        }
-    }
-
-    private func rooftop(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            Circle().fill(Color(hex: accent).opacity(0.85))
-                .frame(width: d * 0.22, height: d * 0.22)
-                .offset(x: d * 0.20, y: -d * 0.16)
+    private func neon(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
             ForEach(0..<4, id: \.self) { i in
-                let tall: CGFloat = d * (0.16 + CGFloat(i % 2) * 0.10)
-                Rectangle().fill(Color(hex: land).opacity(0.85))
-                    .frame(width: d * 0.13, height: tall)
-                    .offset(x: d * (CGFloat(i) * 0.17 - 0.30), y: d * (0.14 - CGFloat(i % 2) * 0.05))
+                let tall: CGFloat = d * (0.34 - CGFloat(i % 2) * 0.12)
+                let x: CGFloat = pw * (CGFloat(i) * 0.27 - 0.405)
+                RoundedRectangle(cornerRadius: d * 0.012)
+                    .fill(Color(hex: accent).opacity(0.75 - Double(i % 3) * 0.15))
+                    .frame(width: d * 0.05, height: tall)
+                    .offset(x: x, y: g - tall / 2 - d * 0.14)
             }
-            ground(d, hz)
+            ground(h, hz)
+            ForEach(0..<4, id: \.self) { i in
+                Rectangle().fill(Color(hex: accent).opacity(0.20))
+                    .frame(width: d * 0.05, height: d * 0.18)
+                    .offset(x: pw * (CGFloat(i) * 0.27 - 0.405), y: g + d * 0.10)
+                    .blur(radius: d * 0.025)
+            }
         }
     }
 
-    private func field(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            ground(d, hz)
-            ForEach(0..<5, id: \.self) { i in
-                Capsule().fill(Color(hex: 0x9A7C3A).opacity(0.5))
-                    .frame(width: d * 0.012, height: d * 0.14)
-                    .offset(x: d * (CGFloat(i) * 0.16 - 0.32), y: hz / 2 - d * 0.04)
+    private func diner(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<2, id: \.self) { i in
+                RoundedRectangle(cornerRadius: d * 0.03).fill(Color(hex: accent).opacity(0.26))
+                    .frame(width: pw * 0.30, height: d * 0.44)
+                    .overlay(RoundedRectangle(cornerRadius: d * 0.03).stroke(Color(hex: accent).opacity(0.55), lineWidth: d * 0.007))
+                    .offset(x: pw * (i == 0 ? -0.32 : 0.32), y: g - d * 0.36)
             }
-            Circle().fill(Color(hex: accent).opacity(0.35))
-                .frame(width: d * 0.16, height: d * 0.16)
-                .offset(x: -d * 0.24, y: -d * 0.22)
+            ground(h, hz)
+            ForEach(0..<2, id: \.self) { i in
+                Capsule().fill(Color(hex: land).opacity(0.9))
+                    .frame(width: d * 0.09, height: d * 0.22)
+                    .offset(x: pw * (i == 0 ? -0.40 : 0.40), y: g + d * 0.07)
+            }
         }
     }
 
-    private func gym(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            Rectangle().fill(Color(hex: accent).opacity(0.22))
-                .frame(width: d * 0.30, height: d * 0.34)
+    private func rooftop(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            Circle().fill(Color(hex: accent).opacity(0.85))
+                .frame(width: d * 0.24, height: d * 0.24)
+                .offset(x: pw * 0.33, y: g - d * 0.60)
+            ForEach(0..<7, id: \.self) { i in
+                let tall: CGFloat = d * (0.20 + CGFloat((i * 5) % 3) * 0.13)
+                Rectangle().fill(Color(hex: land).opacity(0.75))
+                    .frame(width: pw * 0.10, height: tall)
+                    .offset(x: pw * (CGFloat(i) * 0.15 - 0.45), y: g - tall / 2)
+            }
+            ground(h, hz)
+        }
+    }
+
+    private func field(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            Circle().fill(Color(hex: accent).opacity(0.28))
+                .frame(width: d * 0.24, height: d * 0.24)
+                .offset(x: -pw * 0.34, y: g - d * 0.58)
+            ground(h, hz)
+            ForEach(0..<13, id: \.self) { i in
+                Capsule().fill(Color(hex: 0x8B6F30).opacity(0.42))
+                    .frame(width: d * 0.014, height: d * 0.19)
+                    .offset(x: pw * (CGFloat(i) * 0.083 - 0.50), y: g + d * 0.07)
+            }
+        }
+    }
+
+    private func gym(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            Rectangle().fill(Color(hex: accent).opacity(0.20))
+                .frame(width: pw * 0.24, height: d * 0.50)
                 .rotationEffect(.degrees(12))
-                .offset(x: -d * 0.22, y: -d * 0.14)
+                .offset(x: -pw * 0.33, y: g - d * 0.52)
                 .blur(radius: d * 0.02)
+            Rectangle().fill(Color(hex: 0x2A241C).opacity(0.45))
+                .frame(width: d * 0.006, height: d * 0.22)
+                .offset(x: pw * 0.34, y: g - d * 0.62)
             Capsule().fill(Color(hex: land))
-                .frame(width: d * 0.10, height: d * 0.26)
-                .offset(x: d * 0.30, y: -d * 0.10)
-            Rectangle().fill(Color(hex: 0x2A241C).opacity(0.5))
-                .frame(width: d * 0.006, height: d * 0.12)
-                .offset(x: d * 0.30, y: -d * 0.28)
-            ground(d, hz)
+                .frame(width: d * 0.13, height: d * 0.32)
+                .offset(x: pw * 0.34, y: g - d * 0.35)
+            ground(h, hz)
         }
     }
 
-    private func floor(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            ForEach(0..<6, id: \.self) { i in
-                RoundedRectangle(cornerRadius: d * 0.01)
-                    .fill(Color(hex: accent).opacity(0.55 - Double(i % 3) * 0.12))
-                    .frame(width: d * 0.10, height: d * 0.07)
-                    .offset(x: d * (CGFloat(i % 3) * 0.20 - 0.22), y: d * (CGFloat(i / 3) * 0.13 - 0.20))
+    private func floor(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<8, id: \.self) { i in
+                let col = CGFloat(i % 4)
+                let row = CGFloat(i / 4)
+                RoundedRectangle(cornerRadius: d * 0.012)
+                    .fill(Color(hex: accent).opacity(0.48 - Double(i % 4) * 0.08))
+                    .frame(width: pw * 0.16, height: d * 0.10)
+                    .offset(x: pw * (col * 0.28 - 0.42), y: g - d * (row * 0.19 + 0.24))
             }
-            ground(d, hz)
+            ground(h, hz)
         }
     }
 
-    private func racks(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            ForEach(0..<2, id: \.self) { side in
-                rack(d).offset(x: d * (side == 0 ? -0.30 : 0.30), y: -d * 0.06)
+    private func racks(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<4, id: \.self) { i in
+                let far = i == 0 || i == 3
+                rack(d, tall: far ? 0.30 : 0.38)
+                    .offset(x: pw * (CGFloat(i) * 0.26 - 0.39), y: g - d * (far ? 0.20 : 0.25))
             }
-            ground(d, hz)
+            ground(h, hz)
         }
     }
-    private func rack(_ d: CGFloat) -> some View {
+    private func rack(_ d: CGFloat, tall: CGFloat) -> some View {
         VStack(spacing: d * 0.02) {
-            ForEach(0..<4, id: \.self) { _ in
+            ForEach(0..<5, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: d * 0.006)
                     .fill(Color(hex: accent).opacity(0.5))
-                    .frame(width: d * 0.03, height: d * 0.012)
+                    .frame(width: d * 0.05, height: d * 0.014)
             }
         }
         .padding(d * 0.03)
+        .frame(height: d * tall)
         .background(RoundedRectangle(cornerRadius: d * 0.02).fill(Color(hex: land)))
     }
 
-    private func orbit(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
+    private func orbit(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<14, id: \.self) { i in
+                Circle().fill(Color.white.opacity(0.55))
+                    .frame(width: d * 0.013, height: d * 0.013)
+                    .offset(x: pw * (CGFloat(i) * 0.077 - 0.46), y: g - d * (0.28 + CGFloat((i * 7) % 5) * 0.11))
+            }
             Circle().fill(Color(hex: accent).opacity(0.9))
-                .frame(width: d * 0.10, height: d * 0.10)
-                .offset(x: d * 0.26, y: -d * 0.26)
-            Circle().fill(Color(hex: land))
-                .frame(width: d * 1.10, height: d * 1.10)
-                .offset(y: d * 0.74)
-            Circle().stroke(Color(hex: accent).opacity(0.35), lineWidth: d * 0.005)
-                .frame(width: d * 1.24, height: d * 1.24)
-                .offset(y: d * 0.74)
+                .frame(width: d * 0.13, height: d * 0.13)
+                .offset(x: pw * 0.35, y: g - d * 0.66)
+            Circle().stroke(Color(hex: accent).opacity(0.28), lineWidth: d * 0.006)
+                .frame(width: pw * 1.5, height: pw * 1.5)
+                .offset(y: g + pw * 0.75)
+            ground(h, hz)
         }
     }
 
-    private func summit(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            Circle().fill(Color(hex: accent).opacity(0.8))
-                .frame(width: d * 0.20, height: d * 0.20)
-                .offset(x: -d * 0.18, y: -d * 0.18)
-            Triangle().fill(Color(hex: land).opacity(0.7))
-                .frame(width: d * 0.52, height: d * 0.34)
-                .rotationEffect(.degrees(180))
-                .offset(x: -d * 0.18, y: d * 0.14)
-            Triangle().fill(Color(hex: land))
-                .frame(width: d * 0.60, height: d * 0.42)
-                .rotationEffect(.degrees(180))
-                .offset(x: d * 0.16, y: d * 0.10)
-            ground(d, hz)
-        }
-    }
-
-    private func spotlight(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            Triangle().fill(Color(hex: accent).opacity(0.30))
-                .frame(width: d * 0.72, height: d * 0.62)
-                .offset(y: -d * 0.04)
-                .blur(radius: d * 0.02)
-            ground(d, hz)
-            Ellipse().fill(Color(hex: accent).opacity(0.35))
-                .frame(width: d * 0.50, height: d * 0.08)
-                .offset(y: hz / 2 - d * 0.02)
-        }
-    }
-
-    private func platform(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            ForEach(0..<4, id: \.self) { i in
-                Rectangle().stroke(Color(hex: 0xF3E3C6).opacity(0.18), lineWidth: 1)
-                    .frame(width: d * 0.18, height: d * 0.13)
-                    .offset(x: d * (CGFloat(i % 2) * 0.20 - 0.30), y: d * (CGFloat(i / 2) * 0.15 - 0.22))
-            }
+    private func summit(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
             Circle().fill(Color(hex: accent).opacity(0.75))
-                .frame(width: d * 0.09, height: d * 0.09)
-                .offset(x: d * 0.26, y: -d * 0.14)
-                .blur(radius: d * 0.006)
-            ground(d, hz)
+                .frame(width: d * 0.22, height: d * 0.22)
+                .offset(x: -pw * 0.30, y: g - d * 0.60)
+            Triangle().fill(Color(hex: land).opacity(0.60))
+                .frame(width: pw * 0.46, height: d * 0.44)
+                .rotationEffect(.degrees(180))
+                .offset(x: -pw * 0.30, y: g - d * 0.22)
+            Triangle().fill(Color(hex: land))
+                .frame(width: pw * 0.52, height: d * 0.54)
+                .rotationEffect(.degrees(180))
+                .offset(x: pw * 0.31, y: g - d * 0.27)
+            ground(h, hz)
         }
     }
 
-    private func cabin(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            ForEach(0..<7, id: \.self) { i in
-                Circle().fill(Color.white.opacity(0.75))
-                    .frame(width: d * 0.018, height: d * 0.018)
-                    .offset(x: d * (CGFloat(i) * 0.11 - 0.34), y: d * (CGFloat(i % 3) * 0.12 - 0.26))
+    private func spotlight(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<2, id: \.self) { side in
+                Rectangle().fill(Color(hex: land).opacity(0.92))
+                    .frame(width: pw * 0.16, height: h)
+                    .offset(x: pw * (side == 0 ? -0.42 : 0.42), y: g - h * 0.42)
             }
-            RoundedRectangle(cornerRadius: d * 0.02).fill(Color(hex: accent).opacity(0.35))
-                .frame(width: d * 0.26, height: d * 0.20)
-                .offset(x: d * 0.26, y: -d * 0.06)
-            ground(d, hz)
+            Triangle().fill(Color(hex: accent).opacity(0.26))
+                .frame(width: pw * 0.52, height: h * 0.82)
+                .offset(y: g - h * 0.41)
+                .blur(radius: d * 0.03)
+            ground(h, hz)
+            Ellipse().fill(Color(hex: accent).opacity(0.30))
+                .frame(width: pw * 0.46, height: d * 0.10)
+                .offset(y: g + d * 0.04)
         }
     }
 
-    private func sea(_ d: CGFloat, _ hz: CGFloat) -> some View {
-        ZStack {
-            ground(d, hz)
-            ForEach(0..<3, id: \.self) { i in
-                let wide: CGFloat = d * (0.20 - CGFloat(i) * 0.04)
-                Capsule().fill(Color(hex: 0xF3E3C6).opacity(0.30))
-                    .frame(width: wide, height: d * 0.012)
-                    .offset(x: d * (CGFloat(i) * 0.22 - 0.24), y: hz / 2 + d * 0.05 + d * CGFloat(i) * 0.04)
+    private func platform(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<12, id: \.self) { i in
+                let col = CGFloat(i % 6)
+                let row = CGFloat(i / 6)
+                Rectangle().stroke(Color(hex: 0xF3E3C6).opacity(0.15), lineWidth: 1)
+                    .frame(width: pw * 0.16, height: d * 0.16)
+                    .offset(x: pw * (col * 0.17 - 0.425), y: g - d * (row * 0.18 + 0.26))
             }
-            Circle().fill(Color(hex: accent).opacity(0.30))
-                .frame(width: d * 0.14, height: d * 0.14)
-                .offset(x: d * 0.24, y: -d * 0.24)
+            Circle().fill(Color(hex: accent).opacity(0.7))
+                .frame(width: d * 0.11, height: d * 0.11)
+                .offset(x: pw * 0.36, y: g - d * 0.40)
+                .blur(radius: d * 0.008)
+            ground(h, hz)
+            Rectangle().fill(Color(hex: 0xF3E3C6).opacity(0.18))
+                .frame(height: d * 0.014)
+                .offset(y: g + d * 0.12)
+        }
+    }
+
+    private func cabin(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            RoundedRectangle(cornerRadius: d * 0.02).fill(Color(hex: accent).opacity(0.30))
+                .frame(width: pw * 0.22, height: d * 0.26)
+                .offset(x: pw * 0.34, y: g - d * 0.38)
+            ForEach(0..<16, id: \.self) { i in
+                Circle().fill(Color.white.opacity(0.7))
+                    .frame(width: d * 0.020, height: d * 0.020)
+                    .offset(x: pw * (CGFloat(i) * 0.066 - 0.47), y: g - d * (0.16 + CGFloat((i * 5) % 6) * 0.11))
+            }
+            ground(h, hz)
+        }
+    }
+
+    private func sea(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            Circle().fill(Color(hex: accent).opacity(0.26))
+                .frame(width: d * 0.22, height: d * 0.22)
+                .offset(x: pw * 0.33, y: g - d * 0.58)
+            ground(h, hz)
+            ForEach(0..<5, id: \.self) { i in
+                Capsule().fill(Color(hex: 0xF3E3C6).opacity(0.26))
+                    .frame(width: pw * (0.22 - CGFloat(i) * 0.03), height: d * 0.014)
+                    .offset(x: pw * (CGFloat(i) * 0.21 - 0.40), y: g + d * (0.08 + CGFloat(i % 3) * 0.06))
+            }
         }
     }
 
@@ -580,10 +665,36 @@ enum MovieScene: String, CaseIterable, Identifiable {
     private static let overrides: [String: MovieScene] = [
         "jobs": .spotlight, "hormozi": .gym, "cursor": .racks, "belfort": .floor
     ]
+    /// `.orbit` is deliberately absent: it is the reward scene, not a look you can dress into.
     private static let rotation: [MovieScene] = [
         .road, .rooftop, .field, .platform, .diner, .summit, .neon,
-        .sea, .orbit, .cabin, .gym, .racks, .floor, .spotlight
+        .sea, .cabin, .gym, .racks, .floor, .spotlight
     ]
+
+    /// The one scene no look carries. It arrives with the seventh completed Work receipt.
+    static let reward: MovieScene = .orbit
+    static let rewardAt = 7
+
+    /// The room Today and the share image are both showing. One place, so they never disagree.
+    static func forToday(_ todayLogs: [ProofLog], workThisWeek: Int, fallbackKit: Kit) -> MovieScene {
+        guard let latest = todayLogs.first else { return forKit(fallbackKit) }
+        if workThisWeek >= rewardAt && latest.quest == .work { return reward }
+        let seed = FounderLook.all.firstIndex { $0.id == latest.founderID } ?? todayLogs.count
+        return forLane(latest.quest, seed: seed)
+    }
+
+    /// What you did last decides the room. Body earns the outdoors and the gym, Learnt the rooms
+    /// full of other people's work, Work the rooms with an audience. The seed keeps two looks in
+    /// the same lane from landing in the same room.
+    static func forLane(_ lane: QuestKind, seed: Int) -> MovieScene {
+        let set: [MovieScene]
+        switch lane {
+        case .body:  set = [.gym, .summit, .road, .field]
+        case .learn: set = [.racks, .platform, .diner, .cabin]
+        case .work:  set = [.spotlight, .rooftop, .floor, .neon, .sea]
+        }
+        return set[abs(seed) % set.count]
+    }
 
     /// When no look has been earned yet, the clothes alone pick the room.
     static func forKit(_ kit: Kit) -> MovieScene {

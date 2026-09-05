@@ -1196,6 +1196,11 @@ private struct TodayView: View {
     private var stats: WeekStats { LifeEngine.stats(store.logs) }
     private var founderID: String? { store.logsOn(.now).first?.founderID }
     private var sceneKit: Kit { SceneWardrobe.kit(for: store.logsOn(.now), fallback: prefs.kit) }
+    /// What you did last picks the room. Seven completed Work receipts unlock the one room
+    /// no costume carries, and shipping again is what puts you in it.
+    private var todayScene: MovieScene {
+        MovieScene.forToday(store.logsOn(.now), workThisWeek: stats.workN, fallbackKit: sceneKit)
+    }
     private var friendShipped: String? {
         guard let f = circle.friend, let at = f.lastShipAt, LarpyTime.cal.isDateInToday(at) else { return nil }
         return f.name
@@ -1241,12 +1246,12 @@ private struct TodayView: View {
                         .font(.system(size: 32, weight: .medium, design: .serif)).tracking(-1.3)
                         .foregroundStyle(Palette.text).padding(.top, 14)
 
-                    let stageHeight: CGFloat = 246
+                    let stageHeight: CGFloat = 252
                     LarpyCharacterView(life: life, base: .cream, kit: sceneKit,
-                                       width: stageHeight / 1.95, stageRatio: 1.85, interactive: true,
+                                       width: 150, scene: todayScene, sceneCorner: 28, interactive: true,
                                        fedTick: feedSequence, fedLane: fedLane, level: stats.workN, founderID: founderID)
                         .frame(maxWidth: .infinity).frame(height: stageHeight)
-                    Text(FounderLook.find(founderID)?.label.uppercased() ?? SceneWardrobe.caption(sceneKit, hungry: store.todayCount == 0))
+                    Text(store.todayCount == 0 ? "WAITING FOR EVIDENCE" : todayScene.caption)
                         .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.7)
                         .foregroundStyle(Palette.muted).padding(.top, 2)
                         .frame(minHeight: 24).onTapGesture { showWardrobe = true }
@@ -1289,6 +1294,22 @@ private struct TodayView: View {
             LogSheet(quest: quest, store: store, loads: loads, prefillLoad: prefillLoad && quest == .learn)
         }
         .sheet(isPresented: $showWardrobe) { WardrobeView(store: store) }
+        #if DEBUG
+        // Screenshot hook: `simctl launch <sim> com.larpy.app -openWardrobe`. Debug builds only.
+        .onAppear { if ProcessInfo.processInfo.arguments.contains("-openWardrobe") { showWardrobe = true } }
+        .onAppear {
+            guard ProcessInfo.processInfo.arguments.contains("-openShare") else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                renderShare()
+                if let png = shareImage?.pngData() {
+                    let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                        .appendingPathComponent("share-card.png")
+                    try? png.write(to: url)
+                }
+                showShare = true
+            }
+        }
+        #endif
         .sheet(isPresented: $showShare) {
             VStack(spacing: 18) {
                 if let shareImage {
@@ -1313,7 +1334,8 @@ private struct TodayView: View {
     @MainActor private func renderShare() {
         let renderer = ImageRenderer(content: ShareCard(life: life, base: .cream, kit: sceneKit,
                                                         name: prefs.name, loadLabel: fmtTokens(loads.todayTokens), ships: stats.workN,
-                                                        pips: QuestKind.allCases.map { store.doneToday($0) }, loadDetail: loads.todayDetail, founderID: founderID))
+                                                        pips: QuestKind.allCases.map { store.doneToday($0) }, loadDetail: loads.todayDetail,
+                                                        founderID: founderID, scene: todayScene))
         renderer.scale = 3; shareImage = renderer.uiImage
     }
 }
@@ -1745,7 +1767,9 @@ private struct WeekView: View {
     @MainActor private func renderShareCard() -> UIImage? {
         let card = ShareCard(life: LifeEngine.life(store.logs), base: prefs.base, kit: SceneWardrobe.kit(for: store.logsOn(.now), fallback: prefs.kit),
                              name: prefs.name, loadLabel: fmtTokens(loads.todayTokens), ships: shipsThisWeek,
-                             pips: QuestKind.allCases.map { store.doneToday($0) }, loadDetail: loads.todayDetail, founderID: store.logsOn(.now).first?.founderID)
+                             pips: QuestKind.allCases.map { store.doneToday($0) }, loadDetail: loads.todayDetail,
+                             founderID: store.logsOn(.now).first?.founderID,
+                             scene: MovieScene.forToday(store.logsOn(.now), workThisWeek: shipsThisWeek, fallbackKit: prefs.kit))
         let r = ImageRenderer(content: card)
         r.scale = 3
         return r.uiImage
@@ -1885,6 +1909,8 @@ private struct ShareCard: View {
     var pips: [Bool] = [false, false, false]
     var loadDetail = "inputs, not outputs"
     var founderID: String? = nil
+    /// The share image carries the same room the app is showing — the scene is the picture.
+    var scene: MovieScene? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1900,7 +1926,12 @@ private struct ShareCard: View {
             }.padding(.horizontal, 28).padding(.top, 28)
             Text("Become the person.")
                 .font(.system(size: 27, design: .serif)).tracking(-0.8).padding(.top, 20)
-            LarpyCharacterView(life: life, base: .cream, kit: kit, width: 170, level: ships, founderID: founderID).frame(height: 235)
+            LarpyCharacterView(life: life, base: .cream, kit: kit, width: 168, scene: scene, sceneCorner: 22, level: ships, founderID: founderID)
+                .frame(height: 250).padding(.horizontal, 22).padding(.top, 14)
+            if let scene {
+                Text(scene.caption).font(.system(size: 9, weight: .medium, design: .monospaced)).tracking(1.6)
+                    .foregroundStyle(Palette.muted).padding(.top, 11).padding(.bottom, 3)
+            }
             HStack(spacing: 16) {
                 ForEach(Array(QuestKind.allCases.enumerated()), id: \.offset) { i, q in
                     HStack(spacing: 5) {
@@ -1916,7 +1947,7 @@ private struct ShareCard: View {
                 .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.4).padding(.top, 8)
             Spacer(minLength: 10)
         }
-        .foregroundStyle(Palette.ink).frame(width: 360, height: 500).background(Color(hex: 0xF5F0E6))
+        .foregroundStyle(Palette.ink).frame(width: 360, height: 566).background(Color(hex: 0xF5F0E6))
     }
 }
 
@@ -3036,9 +3067,9 @@ struct LarpyCharacterView: View {
     var kit: Kit = .bare
     var width: CGFloat = 220
     var showScene = true
-    /// How much wider the scene circle is than the actor. Today gives the scene room to read;
-    /// the smaller stages keep the tighter original framing so nothing overflows its card.
-    var stageRatio: CGFloat = 1.32
+    /// Overrides the look's own room. Today uses it so the lane you just fed picks the scene.
+    var scene: MovieScene? = nil
+    var sceneCorner: CGFloat = 26
     var interactive = false
     var hatched = true // compatibility: the actor now has a face from the very first open
     var fedTick = 0
@@ -3082,12 +3113,10 @@ struct LarpyCharacterView: View {
         let w = width
         return ZStack {
             if showScene {
-                (founder?.scene ?? MovieScene.forKit(kit)).backdrop(w: w, ratio: stageRatio)
-                Ellipse().fill(Palette.ink.opacity(0.18))
+                (scene ?? founder?.scene ?? MovieScene.forKit(kit)).panel(w: w, corner: sceneCorner)
+                Ellipse().fill(Palette.ink.opacity(0.20))
                     .frame(width: w * 0.85, height: w * 0.075)
                     .blur(radius: w * 0.018).offset(y: w * 0.58)
-                scenery(w: w, phase: phase)
-                    .opacity(entrance).offset(y: (1 - entrance) * 12)
             }
             actor(w: w, blink: blink, phase: phase)
                 .scaleEffect(x: 1 + breathe + squash * 0.12 + poke * 0.045,
@@ -3108,7 +3137,10 @@ struct LarpyCharacterView: View {
                     .opacity(min(1, (1.4 - sinceFeed) * 4))
             }
         }
-        .frame(width: w * 1.5, height: w * 1.45)
+        // With a scene the stage is a panel and fills whatever frame the parent gives it.
+        // Without one it keeps the tight avatar box the small call sites rely on.
+        .frame(width: showScene ? nil : w * 1.5, height: showScene ? nil : w * 1.45)
+        .frame(maxWidth: showScene ? .infinity : nil, maxHeight: showScene ? .infinity : nil)
         .contentShape(Rectangle())
         .onTapGesture {
             guard interactive else { return }
