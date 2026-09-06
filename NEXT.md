@@ -4,8 +4,8 @@ DESIGN.md is built: the Today rewrite, the character wiring, twenty-four rooms, 
 the small paywall (off until App Store Connect has the product), the feedback rows, no onboarding.
 Read **CHANGES.md** for what was verified and what was left.
 
-Before TestFlight: set `Feedback.address`, create the product `com.larpy.app.larp` in App Store Connect,
-rename the look ids to neutral slugs. Then Ayush plus one friend.
+Before TestFlight: set `Feedback.address` and create the product `com.larpy.app.larp` in App Store
+Connect. Look ids are already neutral. Then Ayush plus one friend.
 
 Next, unchanged: one-friend sync, a real universal-link domain, App Groups on a signed device.
 

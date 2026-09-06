@@ -577,24 +577,24 @@ let lockableApps = ["Instagram", "TikTok", "X", "YouTube", "Reddit", "Snapchat",
 
 /// Costumes = founder / movie scenes on the same body. One at a time; maps onto a kit.
 enum Costume: String, CaseIterable, Identifiable {
-    case none, cursor, jobs, hormozi, belfort
+    case none, hoodie, rollneck, gymTee, collar
     var id: String { rawValue }
     var label: String {
         switch self {
         case .none: "None"
-        case .cursor: "Hoodie"
-        case .jobs: "Rollneck"
-        case .hormozi: "Gym tee"
-        case .belfort: "Collar"
+        case .hoodie: "Hoodie"
+        case .rollneck: "Rollneck"
+        case .gymTee: "Gym tee"
+        case .collar: "Collar"
         }
     }
     var kit: Kit {
         switch self {
         case .none: .bare
-        case .cursor: .hoodie
-        case .jobs: .rollneck
-        case .hormozi: .tee
-        case .belfort: .collar
+        case .hoodie: .hoodie
+        case .rollneck: .rollneck
+        case .gymTee: .tee
+        case .collar: .collar
         }
     }
     static func from(kit: Kit) -> Costume { allCases.first { $0.kit == kit } ?? .none }
@@ -624,7 +624,7 @@ final class Prefs: ObservableObject {
     @Published var inviteShown: Bool { didSet { d.set(inviteShown, forKey: "inviteShown") } }
     @Published var widgetCardShown: Bool { didSet { d.set(widgetCardShown, forKey: "widgetCardShown") } }
     @Published var iconOfferShown: Bool { didSet { d.set(iconOfferShown, forKey: "iconOfferShown") } }
-    /// "" = Default · "LarpyHungry" · "LarpyJobs"
+    /// "" = Default · "LarpyHungry" · "LarpyRollneck"
     @Published var iconChoice: String { didSet { d.set(iconChoice, forKey: "iconChoice") } }
     /// Tomorrow's one thing. One field, never a list. `tomorrowIntentFor` is the day key it is for.
     @Published var tomorrowIntent: String { didSet { d.set(tomorrowIntent, forKey: "tomorrowIntent") } }
@@ -635,6 +635,13 @@ final class Prefs: ObservableObject {
     @Published var firstReceiptAt: Double { didSet { d.set(firstReceiptAt, forKey: "firstReceiptAt") } }
     /// The day-one pill has opened the share sheet once.
     @Published var firstSharePillDone: Bool { didSet { d.set(firstSharePillDone, forKey: "firstSharePillDone") } }
+    /// Friday Tape: the week key it was sealed or skipped for, the bet, the week the bet was made, and whether it landed.
+    @Published var tapeWeek: String { didSet { d.set(tapeWeek, forKey: "tapeWeek") } }
+    @Published var fridayBet: String { didSet { d.set(fridayBet, forKey: "fridayBet") } }
+    @Published var fridayBetWeek: String { didSet { d.set(fridayBetWeek, forKey: "fridayBetWeek") } }
+    @Published var fridayBetLanded: Bool { didSet { d.set(fridayBetLanded, forKey: "fridayBetLanded") } }
+    /// The day the card was last sent to the witness. Once a day at most.
+    @Published var witnessSentDay: String { didSet { d.set(witnessSentDay, forKey: "witnessSentDay") } }
 
     init() {
         isDark = d.bool(forKey: "isDark")            // default: light cream paper
@@ -644,12 +651,17 @@ final class Prefs: ObservableObject {
         inviteShown = d.bool(forKey: "inviteShown")
         widgetCardShown = d.bool(forKey: "widgetCardShown")
         iconOfferShown = d.bool(forKey: "iconOfferShown")
-        iconChoice = d.string(forKey: "iconChoice") ?? ""
+        iconChoice = (d.string(forKey: "iconChoice") ?? "").replacingOccurrences(of: "LarpyJobs", with: "LarpyRollneck")
         tomorrowIntent = d.string(forKey: "tomorrowIntent") ?? ""
         tomorrowIntentFor = d.string(forKey: "tomorrowIntentFor") ?? ""
         weekTwoLineDay = d.string(forKey: "weekTwoLineDay") ?? ""
         firstReceiptAt = d.double(forKey: "firstReceiptAt")
         firstSharePillDone = d.bool(forKey: "firstSharePillDone")
+        tapeWeek = d.string(forKey: "tapeWeek") ?? ""
+        fridayBet = d.string(forKey: "fridayBet") ?? ""
+        fridayBetWeek = d.string(forKey: "fridayBetWeek") ?? ""
+        fridayBetLanded = d.bool(forKey: "fridayBetLanded")
+        witnessSentDay = d.string(forKey: "witnessSentDay") ?? ""
         baseID = d.string(forKey: "base") ?? "cream"
         kitID = d.string(forKey: "kit") ?? "bare"        // default: no clothes. Costumes are Settings-only.
         blush = d.object(forKey: "blush") as? Bool ?? true
@@ -1171,6 +1183,8 @@ private struct TodayView: View {
     @State private var shareImage: UIImage?
     @State private var lanesOpen = false
     @State private var intentDraft = ""
+    @State private var betDraft = ""
+    @State private var forceTape = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var life: LifeState { LifeEngine.life(store.logs) }
@@ -1194,6 +1208,39 @@ private struct TodayView: View {
     private var intentForToday: String? { prefs.tomorrowIntentFor == todayKey && !prefs.tomorrowIntent.isEmpty ? prefs.tomorrowIntent : nil }
     private var intentForTomorrow: String? { prefs.tomorrowIntentFor == tomorrowKey && !prefs.tomorrowIntent.isEmpty ? prefs.tomorrowIntent : nil }
     private var asksForIntent: Bool { !dayZero && intentForTomorrow == nil && (stats.todayCount == 3 || hour >= 20) }
+
+    // MARK: Friday Tape (Friday noon to Sunday night, once per week, sealed or skipped)
+    private var weekKey: String {
+        let f = DateFormatter(); f.calendar = LarpyTime.cal; f.dateFormat = "YYYY-'W'ww"; return f.string(from: .now)
+    }
+    private var weekNumber: Int { LarpyTime.cal.component(.weekOfYear, from: .now) }
+    private var tapeWindow: Bool {
+        let wd = LarpyTime.cal.component(.weekday, from: .now)     // 1 Sun … 6 Fri, 7 Sat
+        return (wd == 6 && hour >= 12) || wd == 7 || wd == 1
+    }
+    private var showsTape: Bool { !dayZero && (forceTape || (tapeWindow && prefs.tapeWeek != weekKey)) }
+    private struct WeekCounts { var work = 0, body = 0, learn = 0 }
+    private func counts(weeksAgo: Int) -> WeekCounts? {
+        let cal = LarpyTime.cal
+        guard let thisMonday = cal.dateInterval(of: .weekOfYear, for: cal.startOfDay(for: .now))?.start,
+              let monday = cal.date(byAdding: .weekOfYear, value: -weeksAgo, to: thisMonday),
+              let end = cal.date(byAdding: .weekOfYear, value: 1, to: monday) else { return nil }
+        if weeksAgo > 0, !store.logs.contains(where: { $0.createdAt < end }) { return nil }   // no history before this week
+        let days = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: monday) }
+        var c = WeekCounts()
+        c.work = store.logs.filter { $0.quest == .work && $0.isEligible && $0.createdAt >= monday && $0.createdAt < end }.count
+        c.body = days.filter { LifeEngine.laneDone(store.logs, .body, on: $0) }.count
+        c.learn = days.filter { LifeEngine.laneDone(store.logs, .learn, on: $0) }.count
+        return c
+    }
+    private var tapeVerdict: String {
+        guard let last = counts(weeksAgo: 1) else { return "Week one. Nothing to beat yet." }
+        let d = stats.workN - last.work
+        if d == 0 { return "Same as last week." }
+        let words = ["one", "two", "three", "four", "five", "six", "seven"]
+        let n = abs(d) <= 7 ? words[abs(d) - 1] : "\(abs(d))"
+        return d > 0 ? "Up \(n)." : "Down \(n)."
+    }
 
     /// The one line a person is guaranteed to read. Keyed to receipts, never to the day of the year for the first three.
     private var headline: String {
@@ -1257,7 +1304,9 @@ private struct TodayView: View {
                 captionBlock
 
                 if !dayZero { weekBlock } else { dayZeroLevel }
+                witnessLine
 
+                if showsTape { fridayTape.padding(.top, 16) }
                 if asksForIntent { intentField.padding(.top, 14) }
 
                 rows.padding(.top, 14)
@@ -1273,6 +1322,7 @@ private struct TodayView: View {
         #if DEBUG
         // Screenshot hooks: `simctl launch <sim> com.larpy.app -openWardrobe` / `-openShare`. Debug builds only.
         .onAppear { if ProcessInfo.processInfo.arguments.contains("-openWardrobe") { showWardrobe = true } }
+        .onAppear { if ProcessInfo.processInfo.arguments.contains("-friday") { forceTape = true } }
         .onAppear {
             guard ProcessInfo.processInfo.arguments.contains("-openShare") else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
@@ -1404,6 +1454,86 @@ private struct TodayView: View {
         }.padding(.top, 14).padding(.horizontal, 2)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(stats.workN) Work receipts this week. \(ShipLevel.title(stats.workN)).")
+    }
+
+    /// After a Work receipt, once a day, when a witness is named: send them the card. Success is a reply.
+    @ViewBuilder private var witnessLine: some View {
+        if let friend = circle.friend, store.doneToday(.work), prefs.witnessSentDay != todayKey, let img = shareImage ?? renderedShare() {
+            HStack {
+                Spacer()
+                ShareLink(item: Image(uiImage: img), subject: Text("\(stats.workN) out this week."), message: Text("\(stats.workN) out this week."),
+                          preview: SharePreview("Larpy · \(stats.workN) out this week", image: Image(uiImage: img))) {
+                    Text("Send to \(friend.name)").font(.system(size: 14, weight: .semibold)).foregroundStyle(Palette.gold)
+                        .frame(minHeight: 36)
+                }
+                .simultaneousGesture(TapGesture().onEnded { prefs.witnessSentDay = todayKey })
+            }.padding(.top, 4)
+        }
+    }
+
+    /// Friday Tape, the small version. Three numbers against last week, one verdict, one bet, one seal.
+    private var fridayTape: some View {
+        let last = counts(weeksAgo: 1)
+        let previousBet = !prefs.fridayBet.isEmpty && prefs.fridayBetWeek != weekKey ? prefs.fridayBet : nil
+        return VStack(alignment: .leading, spacing: 14) {
+            Text("FRIDAY TAPE · W\(weekNumber)").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(2).foregroundStyle(Palette.muted)
+            HStack(alignment: .top, spacing: 0) {
+                tapeNumber(stats.workN, last?.work, "WORK", Palette.gold)
+                tapeNumber(stats.bodyN, last?.body, "BODY DAYS", Palette.train)
+                tapeNumber(stats.learnN, last?.learn, "LEARNT DAYS", Palette.load)
+            }
+            Text(tapeVerdict).font(.system(size: 27, weight: .medium, design: .serif)).tracking(-0.8).foregroundStyle(Palette.text)
+            if let previousBet {
+                HStack(spacing: 10) {
+                    Text(prefs.fridayBetLanded ? "BET · LANDED" : "BET · STILL A THOUGHT").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(prefs.fridayBetLanded ? Palette.gold : Palette.muted)
+                    Text(previousBet).font(.system(size: 13, design: .serif).italic()).foregroundStyle(Palette.text).lineLimit(1)
+                    Spacer()
+                    if !prefs.fridayBetLanded {
+                        Button("That was it") { prefs.fridayBetLanded = true }.font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.gold).buttonStyle(.plain)
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                TextField("What ships by Friday?", text: $betDraft).font(.system(size: 17, design: .serif)).foregroundStyle(Palette.text)
+                    .onChange(of: betDraft) { _, v in if v.count > 60 { betDraft = String(v.prefix(60)) } }
+                HandDrawnUnderline().stroke(Palette.gold, style: StrokeStyle(lineWidth: 1.5, lineCap: .round)).frame(height: 5)
+            }
+            HStack(spacing: 18) {
+                Button { seal(bet: betDraft) } label: {
+                    Text("Seal the tape").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.ink)
+                        .frame(maxWidth: .infinity, minHeight: 44).background(Palette.gold, in: Capsule())
+                }.buttonStyle(.plain)
+                Button("Skip") { seal(bet: "") }.font(.system(size: 14, weight: .medium)).foregroundStyle(Palette.muted).buttonStyle(.plain)
+            }
+        }
+        .padding(20)
+        .background(Palette.card.opacity(0.5), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Palette.line, lineWidth: 1))
+        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+    }
+    private func tapeNumber(_ now: Int, _ before: Int?, _ label: String, _ tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(now)").font(.system(size: 44, weight: .medium, design: .serif)).tracking(-2).foregroundStyle(Palette.text)
+                if let before {
+                    let d = now - before
+                    Text(d == 0 ? "=" : d > 0 ? "+\(d)" : "\(d)")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(d > 0 ? Palette.gold : Palette.muted)
+                }
+            }
+            HStack(spacing: 5) {
+                Circle().fill(tint).frame(width: 5, height: 5)
+                Text(label).font(.system(size: 9, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Palette.muted)
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+    private func seal(bet: String) {
+        let t = bet.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !t.isEmpty { prefs.fridayBet = t; prefs.fridayBetWeek = weekKey; prefs.fridayBetLanded = false }
+        withAnimation(.easeOut(duration: 0.26)) { prefs.tapeWeek = weekKey; forceTape = false }
+        betDraft = ""
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     private var dayZeroLevel: some View {
@@ -2289,12 +2419,12 @@ private struct PeopleView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                HStack {
-                    Text("People").font(.system(size: 32, weight: .bold)).foregroundStyle(Palette.text)
-                    Spacer(); GearButton(action: onSettings).frame(width: 44, height: 44)
+                HStack(alignment: .top) {
+                    Text("One friend.\nKeep each other honest.")
+                        .font(.system(size: 30, weight: .medium, design: .serif)).tracking(-1).foregroundStyle(Palette.text)
+                    Spacer(minLength: 8)
+                    GearButton(action: onSettings).frame(width: 44, height: 44)
                 }
-                Text("One friend.\nKeep each other honest.")
-                    .font(.system(size: 29, weight: .medium, design: .serif)).foregroundStyle(Palette.text)
                 Button { showProfile = true } label: {
                     HStack(spacing: 15) {
                         LarpyCharacterView(life: LifeEngine.life(store.logs), base: .cream,
@@ -2333,7 +2463,7 @@ private struct PeopleView: View {
                         Text("A friend, a cofounder, your gym mate.\nOne person who cares if you actually do it.")
                             .font(.system(size: 16)).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                         BigButton("Invite one friend", icon: "arrow.up.right") { showInvite = true }
-                        Text("Invite preview · live sharing is next.").font(.system(size: 12)).foregroundStyle(Palette.muted)
+                        Text("For now, send them the card.").font(.system(size: 12)).foregroundStyle(Palette.muted)
                     }.frame(maxWidth: .infinity).padding(.vertical, 12)
                 }
                 if circle.friend == nil {
@@ -2444,7 +2574,7 @@ enum LarpyIcon {
     static let all: [(id: String, label: String, asset: String)] = [
         ("", "Default", "LarpyPrimary"),
         ("LarpyHungry", "Hungry", "LarpyHungry"),
-        ("LarpyJobs", "Rollneck", "LarpyJobs")
+        ("LarpyRollneck", "Rollneck", "LarpyRollneck")
     ]
 
     @MainActor
@@ -2831,7 +2961,7 @@ struct SettingsView: View {
                         Spacer()
                         Picker("", selection: Binding(
                             get: { Costume.from(kit: prefs.kit).rawValue },
-                            set: { prefs.kitID = (Costume(rawValue: $0) ?? .cursor).kit.rawValue })) {
+                            set: { prefs.kitID = (Costume(rawValue: $0) ?? .hoodie).kit.rawValue })) {
                             ForEach(Costume.allCases) { c in Text(c.label).tag(c.rawValue) }
                         }
                         .pickerStyle(.menu)
@@ -2905,13 +3035,21 @@ struct SettingsView: View {
                 Toggle(isOn: $prefs.notificationsOn) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Notifications").font(rowFont).foregroundStyle(Palette.text)
-                        Text("10:00 Body? · 18:00 Work?").font(.system(size: 11)).foregroundStyle(Palette.muted)
+                        Text(UserDefaults.standard.bool(forKey: "remindersQuiet") && !prefs.notificationsOn
+                             ? "Larpy went quiet after three unanswered pings. Turn him back on."
+                             : "10:00 Body? · 18:00 Work?").font(.system(size: 11)).foregroundStyle(Palette.muted)
                     }
                 }
                 .tint(Palette.gold)
                 .frame(minHeight: 44)
                 .listRowBackground(Palette.card)
-                .onChange(of: prefs.notificationsOn) { if prefs.notificationsOn { LarpyReminders.requestAuthorization() }; LarpyReminders.refresh(store: store, agents: agents) }
+                .onChange(of: prefs.notificationsOn) {
+                    if prefs.notificationsOn {
+                        UserDefaults.standard.set(false, forKey: "remindersQuiet"); UserDefaults.standard.set(0, forKey: "pingUnanswered")
+                        LarpyReminders.requestAuthorization()
+                    }
+                    LarpyReminders.refresh(store: store, agents: agents)
+                }
 
                 // 5b · Feedback, hidden until the first completed Work. Rows the user opens, never a prompt.
                 if hasShipped {
@@ -3293,28 +3431,6 @@ struct LarpyCharacterView: View {
             }
             .scaleEffect(y: blink ? 0.13 : 1)
     }
-
-    @ViewBuilder private func scenery(w: CGFloat, phase: Double) -> some View {
-        if (kit == .tee && founder == nil) || founder?.prop == "board" {
-            RoundedRectangle(cornerRadius: w * 0.02).fill(Color(hex: 0xFFFBF2))
-                .overlay(RoundedRectangle(cornerRadius: w * 0.02).stroke(Palette.ink.opacity(0.45), lineWidth: 1))
-                .overlay(alignment: .topLeading) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("VOLUME").font(.system(size: w * 0.035, weight: .bold, design: .monospaced))
-                        Text("||||  ||||").font(.system(size: w * 0.052, weight: .medium, design: .monospaced)).rotationEffect(.degrees(-4))
-                    }.foregroundStyle(Palette.ink).padding(w * 0.05)
-                }
-                .frame(width: w * 0.64, height: w * 0.57)
-                .rotationEffect(.degrees(5)).offset(x: w * 0.34, y: -w * 0.31)
-        }
-        if (kit == .collar && founder == nil) || founder?.id == "belfort" {
-            RoundedRectangle(cornerRadius: 3).fill(Color(hex: 0xBA9770))
-                .frame(width: w * 1.20, height: w * 0.06).offset(y: w * 0.48)
-        }
-        if kit == .rollneck && !hungry {
-            Capsule().fill(Palette.ink.opacity(0.13)).frame(width: w * 1.15, height: 1).offset(y: w * 0.60)
-        }
-    }
 }
 
 struct CurveLine: Shape {
@@ -3407,8 +3523,23 @@ enum LarpyReminders {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [morningID, eveningID, "larpy.1000", "larpy.1800"])
 
-        let on = UserDefaults.standard.object(forKey: "notificationsOn") as? Bool ?? false
+        let d = UserDefaults.standard
+        let on = d.object(forKey: "notificationsOn") as? Bool ?? false
         guard on else { return }
+
+        // Three unanswered days in a row and Larpy goes quiet. Turning the toggle back on resets him.
+        let today = LarpyTime.dayKey()
+        let yesterdayDate = LarpyTime.cal.date(byAdding: .day, value: -1, to: .now) ?? .now
+        if d.string(forKey: "pingLastDay") == LarpyTime.dayKey(yesterdayDate) {
+            let answered = LifeEngine.anyDone(store.logs, on: yesterdayDate)
+            d.set(answered ? 0 : d.integer(forKey: "pingUnanswered") + 1, forKey: "pingUnanswered")
+        }
+        if store.todayCount > 0 { d.set(0, forKey: "pingUnanswered") }
+        if d.integer(forKey: "pingUnanswered") >= 3 {
+            d.set(true, forKey: "remindersQuiet"); d.set(false, forKey: "notificationsOn"); d.set(0, forKey: "pingUnanswered")
+            return
+        }
+        d.set(today, forKey: "pingLastDay")
 
         let n = max(0, 3 - store.todayCount)
         if !store.doneToday(.body) { add(center, id: "larpy.1000", hour: 10, minute: 0, body: "Body?", badge: n) }

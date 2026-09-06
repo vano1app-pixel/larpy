@@ -1,5 +1,19 @@
 # Larpy — what changed
 
+## Names out of the code, Friday Tape, witness, quiet pings — 6 September 2026 (afternoon)
+
+- **Look ids are neutral slugs**, `look-01` to `look-54`. A legacy map resolves the old keys, and the receipt store rewrites stored `founderID`s once on load. Verified on the QA simulator: stored ids read `look-10`, `look-11` after one launch. The costume enum cases are hoodie / rollneck / gymTee / collar. The alternate icon asset is `LarpyRollneck`; an old `LarpyJobs` choice migrates. `strings` on the binary: no name.
+- **Friday Tape**, the small version. From Friday noon to Sunday night, under the week block: `FRIDAY TAPE · W36`, three 44pt serif numbers (Work, Body days, Learnt days) with a delta chip against last week, gold when up and muted when down, a verdict (`Up two.` / `Same as last week.` / `Down one.` / `Week one. Nothing to beat yet.`), a bet field `What ships by Friday?`, `Seal the tape` and `Skip`. Next Friday shows `BET · STILL A THOUGHT` with `That was it`, or `BET · LANDED`. Once per week. Debug flag `-friday` forces it.
+- **Send to witness.** When a friend is named and Work landed today, a gold `Send to {name}` text button shares the card with `{n} out this week.` Once a day.
+- **Quiet pings.** Three days in a row of pings with no receipt and the scheduler switches notifications off and the Settings subtitle reads `Larpy went quiet after three unanswered pings. Turn him back on.` Turning the toggle on resets the count.
+- People: the sans header is gone, the serif line carries the page, and the empty state says `For now, send them the card.`
+- The dead scenery drawing code is deleted.
+
+### Checked
+- Build of app, widget and share extension: succeeded. 30 receipt checks: pass.
+- Running app: Today with the Friday Tape forced, People.
+- Not checked: the tape on a real Friday, the witness button (no friend named on the QA simulator), the quiet rule over three real days, the alternate icon on a device.
+
 ## The design direction, built — 6 September 2026
 
 Everything in DESIGN.md's "Do first" list plus the buildable parts of each section. No onboarding. The first receipt is the setup.

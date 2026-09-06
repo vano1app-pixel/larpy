@@ -18,8 +18,15 @@ final class ProofStore: ObservableObject {
         do {
             try fileManager.createDirectory(at: photosURL, withIntermediateDirectories: true)
             if fileManager.fileExists(atPath: jsonURL.path) {
-                logs = try JSONDecoder().decode([ProofLog].self, from: Data(contentsOf: jsonURL))
+                var loaded = try JSONDecoder().decode([ProofLog].self, from: Data(contentsOf: jsonURL))
                     .sorted { $0.createdAt > $1.createdAt }
+                // Old receipts carry look keys that were once a person's name. Rewrite them once.
+                var migrated = false
+                for i in loaded.indices {
+                    if let c = FounderLook.canonicalID(loaded[i].founderID), c != loaded[i].founderID { loaded[i].founderID = c; migrated = true }
+                }
+                if migrated { try? JSONEncoder().encode(loaded).write(to: jsonURL, options: [.atomic]) }
+                logs = loaded
             }
         } catch { storageUnreadable = true; errorMessage = "Your receipts couldn't be opened. Nothing has been overwritten." }
     }

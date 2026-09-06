@@ -35,11 +35,11 @@
 				<key>UIPrerenderedIcon</key>
 				<false/>
 			</dict>
-			<key>LarpyJobs</key>
+			<key>LarpyRollneck</key>
 			<dict>
 				<key>CFBundleIconFiles</key>
 				<array>
-					<string>LarpyJobs</string>
+					<string>LarpyRollneck</string>
 				</array>
 				<key>UIPrerenderedIcon</key>
 				<false/>
