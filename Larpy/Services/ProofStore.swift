@@ -72,7 +72,11 @@ final class ProofStore: ObservableObject {
         guard let filename = log.photoFilename, filename == (filename as NSString).lastPathComponent else { return nil }
         return photosURL.appendingPathComponent(filename)
     }
-    private var nextLook: FounderLook { FounderLook.next(ordinal: logs.filter { $0.isEligible }.count) }
+    /// The next look in order. When the wardrobe is paused after the free month the look holds where it is.
+    private var nextLook: FounderLook {
+        if !Larp.wardrobeOpen, let held = FounderLook.find(logs.first?.founderID) { return held }
+        return FounderLook.next(ordinal: logs.filter { $0.isEligible }.count)
+    }
     @discardableResult
     private func add(_ log: ProofLog) -> Bool {
         guard logs.contains(where: { $0.id == log.id }) == false else { return true }
@@ -82,11 +86,18 @@ final class ProofStore: ObservableObject {
            logs.contains(where: { $0.quest == .work && $0.proofKind == .link && $0.value.trimmingCharacters(in: CharacterSet(charactersIn: "/")) == log.value.trimmingCharacters(in: CharacterSet(charactersIn: "/")) }) {
             errorMessage = "That Ship already has a receipt. Bring something new."; return false
         }
+        var log = log
         let next = ([log] + logs).sorted { $0.createdAt > $1.createdAt }
+        // Stamp the room this receipt puts Larpy in, so history can show it without re-deriving.
+        if log.sceneID == nil {
+            let todays = next.filter { LarpyTime.cal.isDate($0.createdAt, inSameDayAs: log.createdAt) }
+            log.sceneID = MovieScene.forToday(todays, allLogs: next, workThisWeek: LifeEngine.stats(next).workN, fallbackKit: .bare, paused: !Larp.wardrobeOpen).rawValue
+        }
+        let stamped = ([log] + logs).sorted { $0.createdAt > $1.createdAt }
         do {
-            try JSONEncoder().encode(next).write(to: jsonURL, options: [.atomic])
+            try JSONEncoder().encode(stamped).write(to: jsonURL, options: [.atomic])
             errorMessage = nil
-            logs = next
+            logs = stamped
             return true
         } catch {
             errorMessage = "Couldn't save the receipt. Keep this open and try again."

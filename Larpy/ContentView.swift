@@ -51,27 +51,12 @@ extension Color {
 
 // MARK: - Base
 
+/// One body colour. The egg is cream in both themes; the costume and the room carry the variety.
 enum LarpyBase: String, CaseIterable, Identifiable {
-    case cream, peach, mist, butter
+    case cream
     var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .cream: "Cream"
-        case .peach: "Peach"
-        case .mist: "Mist"
-        case .butter: "Butter"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .cream: Color(hex: 0xF2E6D4)
-        case .peach: Color(hex: 0xF3D5C4)
-        case .mist: Color(hex: 0xE4E7E2)
-        case .butter: Color(hex: 0xF3E6B8)
-        }
-    }
+    var displayName: String { "Cream" }
+    var color: Color { Color(hex: 0xF2E6D4) }
 }
 
 // MARK: - Life model
@@ -630,7 +615,6 @@ final class Prefs: ObservableObject {
     @Published var appsToLock: String { didSet { d.set(appsToLock, forKey: "appsToLock") } }
     @Published var showFocused: Bool { didSet { d.set(showFocused, forKey: "showFocused") } }
     @Published var notificationsOn: Bool { didSet { d.set(notificationsOn, forKey: "notificationsOn") } }
-    @Published var hasOnboarded: Bool { didSet { d.set(hasOnboarded, forKey: "hasOnboarded") } }
     @Published var isDark: Bool { didSet { d.set(isDark, forKey: "isDark"); Theme.isDark = isDark } }
     @Published var providerID: String { didSet { d.set(providerID, forKey: "provider") } }
 
@@ -642,6 +626,15 @@ final class Prefs: ObservableObject {
     @Published var iconOfferShown: Bool { didSet { d.set(iconOfferShown, forKey: "iconOfferShown") } }
     /// "" = Default · "LarpyHungry" · "LarpyJobs"
     @Published var iconChoice: String { didSet { d.set(iconChoice, forKey: "iconChoice") } }
+    /// Tomorrow's one thing. One field, never a list. `tomorrowIntentFor` is the day key it is for.
+    @Published var tomorrowIntent: String { didSet { d.set(tomorrowIntent, forKey: "tomorrowIntent") } }
+    @Published var tomorrowIntentFor: String { didSet { d.set(tomorrowIntentFor, forKey: "tomorrowIntentFor") } }
+    /// The day 'Week two. Still here.' was earned. Said once.
+    @Published var weekTwoLineDay: String { didSet { d.set(weekTwoLineDay, forKey: "weekTwoLineDay") } }
+    /// First eligible receipt, epoch seconds. Starts the free month of wardrobe.
+    @Published var firstReceiptAt: Double { didSet { d.set(firstReceiptAt, forKey: "firstReceiptAt") } }
+    /// The day-one pill has opened the share sheet once.
+    @Published var firstSharePillDone: Bool { didSet { d.set(firstSharePillDone, forKey: "firstSharePillDone") } }
 
     init() {
         isDark = d.bool(forKey: "isDark")            // default: light cream paper
@@ -652,6 +645,11 @@ final class Prefs: ObservableObject {
         widgetCardShown = d.bool(forKey: "widgetCardShown")
         iconOfferShown = d.bool(forKey: "iconOfferShown")
         iconChoice = d.string(forKey: "iconChoice") ?? ""
+        tomorrowIntent = d.string(forKey: "tomorrowIntent") ?? ""
+        tomorrowIntentFor = d.string(forKey: "tomorrowIntentFor") ?? ""
+        weekTwoLineDay = d.string(forKey: "weekTwoLineDay") ?? ""
+        firstReceiptAt = d.double(forKey: "firstReceiptAt")
+        firstSharePillDone = d.bool(forKey: "firstSharePillDone")
         baseID = d.string(forKey: "base") ?? "cream"
         kitID = d.string(forKey: "kit") ?? "bare"        // default: no clothes. Costumes are Settings-only.
         blush = d.object(forKey: "blush") as? Bool ?? true
@@ -662,7 +660,6 @@ final class Prefs: ObservableObject {
         appsToLock = d.string(forKey: "appsToLock") ?? ""
         showFocused = d.object(forKey: "showFocused") as? Bool ?? true
         notificationsOn = d.object(forKey: "notificationsOn") as? Bool ?? false
-        hasOnboarded = d.bool(forKey: "hasOnboarded")
     }
 
     var base: LarpyBase { LarpyBase(rawValue: baseID) ?? .cream }
@@ -1046,10 +1043,7 @@ struct ContentView: View {
     @State private var tab = 0
     @State private var activeLane: QuestKind?
     @State private var showSettings = false
-    @State private var showInvite = false
-    @State private var showWidgetCard = false
-    @State private var showIconOffer = false
-    @State private var iconOfferPending = false
+    @State private var showAsk = false
     @State private var draft: ShareDraft?
 
     var body: some View {
@@ -1076,35 +1070,34 @@ struct ContentView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView(store: store, prefs: prefs, agents: agents, keys: keys)
         }
-        // After the FIRST receipt: one decision. Invite one person.
-        .fullScreenCover(isPresented: $showInvite, onDismiss: {
-            if !prefs.widgetCardShown {
-                prefs.widgetCardShown = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { showWidgetCard = true }
-            } else if iconOfferPending { iconOfferPending = false; showIconOffer = true }
-        }) {
-            InviteView(prefs: prefs, circle: circle, store: store)
-        }
-        .sheet(isPresented: $showWidgetCard) { WidgetCardView(prefs: prefs, store: store) }
-        .sheet(isPresented: $showIconOffer) { IconOfferView(prefs: prefs) }
+        .sheet(isPresented: $showAsk) { AskView(store: store, prefs: prefs) }
+        // No popups after a receipt. The day-one pill and the widget card live inline on Today.
         .sheet(item: $draft) { d in DraftSheet(draft: d, store: store, loads: loads) }
+        #if DEBUG
         .onAppear {
-            prefs.hasOnboarded = true
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("-openSettings") { DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { showSettings = true } }
+            if args.contains("-openAsk") { DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { showAsk = true } }
+            if args.contains("-dark") { prefs.isDark = true }
+            if args.contains("-light") { prefs.isDark = false }
+            if args.contains("-tailCard") { prefs.widgetCardShown = false }
+            if args.contains("-openWeek") { tab = 1 }
+            if args.contains("-openPeople") { tab = 2 }
+        }
+        #endif
+        .onAppear {
             refreshAll()
             pickUpDraft()
+            if prefs.firstReceiptAt == 0, let first = store.logs.filter(\.isEligible).map(\.createdAt).min() {
+                prefs.firstReceiptAt = first.timeIntervalSince1970
+            }
         }
         .onChange(of: store.logs) { refreshAll() }
         .onChange(of: agents.weekTotal) { refreshAll() }
-        .onChange(of: store.logs.first?.id) { _, _ in receiptLanded() }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             refreshAll()
             pickUpDraft()
-            // Peak-End: the first open after the invite moment → "Add Larpy to your Home Screen."
-            if !store.logs.isEmpty, prefs.inviteShown, !prefs.widgetCardShown, !showInvite, prefs.hasOnboarded {
-                prefs.widgetCardShown = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { showWidgetCard = true }
-            }
         }
         .onOpenURL { url in
             guard url.scheme == "larpy" else { return }
@@ -1144,25 +1137,8 @@ struct ContentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { draft = d }
     }
 
-    /// A receipt just landed. Squat + line come first (<400ms, in the pet). Then, once each: invite, icon.
-    private func receiptLanded() {
-        guard let latest = store.logs.first, LarpyTime.cal.isDateInToday(latest.createdAt) else { return }
-        let firstEver = !prefs.inviteShown
-        let firstShip = latest.quest == .work && store.logs.filter { $0.quest == .work }.count == 1
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            if firstEver, !prefs.inviteShown {
-                prefs.inviteShown = true
-                if firstShip, !prefs.iconOfferShown { prefs.iconOfferShown = true; iconOfferPending = true }
-                showInvite = true
-            } else if firstShip, !prefs.iconOfferShown {
-                prefs.iconOfferShown = true
-                showIconOffer = true
-            }
-        }
-    }
 }
 
-// Shared gear button for each tab header.
 private struct GearButton: View {
     let action: () -> Void
     var body: some View {
@@ -1186,116 +1162,116 @@ private struct TodayView: View {
     @Binding var active: QuestKind?
     let onSettings: () -> Void
     @State private var prefillLoad = false
+    @State private var prefillNote = ""
     @State private var flashLane: QuestKind?
     @State private var feedSequence = 0
     @State private var fedLane = 0
     @State private var showWardrobe = false
     @State private var showShare = false
     @State private var shareImage: UIImage?
+    @State private var lanesOpen = false
+    @State private var intentDraft = ""
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private var life: LifeState { LifeEngine.life(store.logs) }
     private var stats: WeekStats { LifeEngine.stats(store.logs) }
     private var founderID: String? { store.logsOn(.now).first?.founderID }
     private var sceneKit: Kit { SceneWardrobe.kit(for: store.logsOn(.now), fallback: prefs.kit) }
-    /// What you did last picks the room. Seven completed Work receipts unlock the one room
-    /// no costume carries, and shipping again is what puts you in it.
     private var todayScene: MovieScene {
-        MovieScene.forToday(store.logsOn(.now), workThisWeek: stats.workN, fallbackKit: sceneKit)
+        MovieScene.forToday(store.logsOn(.now), allLogs: store.logs, workThisWeek: stats.workN, fallbackKit: sceneKit, paused: !Larp.wardrobeOpen(prefs: prefs))
     }
     private var friendShipped: String? {
         guard let f = circle.friend, let at = f.lastShipAt, LarpyTime.cal.isDateInToday(at) else { return nil }
         return f.name
     }
+    /// Day zero: nothing has ever been logged. The first receipt is the setup.
+    private var dayZero: Bool { store.logs.isEmpty }
+    /// Three or more empty days and nothing yet today: the sofa era. One receipt ends it.
+    private var returnDoor: Bool { !dayZero && stats.emptyStreak >= 3 && stats.todayCount == 0 }
+    private var hour: Int { LarpyTime.cal.component(.hour, from: .now) }
+    private var todayKey: String { LarpyTime.dayKey() }
+    private var tomorrowKey: String { LarpyTime.dayKey(LarpyTime.cal.date(byAdding: .day, value: 1, to: .now) ?? .now) }
+    private var intentForToday: String? { prefs.tomorrowIntentFor == todayKey && !prefs.tomorrowIntent.isEmpty ? prefs.tomorrowIntent : nil }
+    private var intentForTomorrow: String? { prefs.tomorrowIntentFor == tomorrowKey && !prefs.tomorrowIntent.isEmpty ? prefs.tomorrowIntent : nil }
+    private var asksForIntent: Bool { !dayZero && intentForTomorrow == nil && (stats.todayCount == 3 || hour >= 20) }
+
+    /// The one line a person is guaranteed to read. Keyed to receipts, never to the day of the year for the first three.
+    private var headline: String {
+        if dayZero { return "Show me the thing." }
+        if returnDoor { return "Sofa era. One thing and it ends." }
+        let eligible = store.logs.filter(\.isEligible)
+        if eligible.count == 1, let only = eligible.first {
+            switch only.quest {
+            case .work: return "Out in the world. Now the next one."
+            case .body: return "Body's in. The product's still a rumour."
+            case .learn: return "Loaded. Where does it go."
+            }
+        }
+        if eligible.count == 2 {
+            return eligible.contains { $0.quest == .work } ? "Second receipt. Now it's a pattern, not a mood." : "Two receipts. Neither left the building."
+        }
+        if stats.todayCount == 0, stats.proofsYesterday > 0 { return "Yesterday's receipt expired at midnight." }
+        if let intent = intentForToday, hour >= 18, !store.doneToday(.work) { return "You said \u{201C}\(intent)\u{201D}. Where is it." }
+        if LarpyTime.cal.component(.weekday, from: .now) == 2, stats.workN == 0, stats.todayCount == 0 { return "New week. Costume's back on." }
+        if prefs.weekTwoLineDay == todayKey { return "Week two. Still here." }
+        return Voice.line(train: store.doneToday(.body), load: store.doneToday(.learn), ship: store.doneToday(.work), isEgg: false, friendShipped: friendShipped)
+    }
+
+    private var caption: String {
+        if dayZero { return "BARE. ZERO RECEIPTS." }
+        if returnDoor { return "\(stats.emptyStreak) DAYS. 0 RECEIPTS." }
+        if stats.todayCount == 0 { return "WAITING FOR EVIDENCE" }
+        return todayScene.caption
+    }
+
+    private var dateLine: String {
+        let f = DateFormatter(); f.calendar = LarpyTime.cal; f.dateFormat = "EEE d MMM"
+        let count = stats.todayCount == 0 ? "NOTHING IN" : "\(stats.todayCount)/3 IN"
+        return "\(f.string(from: .now).uppercased()) · \(count)"
+    }
+
+    private var lastWorkLine: String? {
+        guard let last = store.logs.first(where: { $0.quest == .work && $0.isEligible }) else { return nil }
+        let f = DateFormatter(); f.calendar = LarpyTime.cal; f.dateFormat = "EEE"
+        let host = last.proofKind == .link ? linkHost(last.value).uppercased() : "SCREENSHOT"
+        return "LAST WORK · \(f.string(from: last.createdAt).uppercased()) · \(host)"
+    }
 
     var body: some View {
         ScrollView {
-                VStack(spacing: 0) {
-                    HStack(alignment: .center) {
-                        Button { prefillLoad = true; active = .learn } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 5) {
-                                    Circle().fill(Palette.load).frame(width: 5, height: 5)
-                                    Text("TOKENS TODAY").font(.system(size: 11, weight: .bold, design: .monospaced)).tracking(2)
-                                }.foregroundStyle(Palette.muted)
-                                Text(fmtTokens(loads.todayTokens)).font(.system(size: 44, weight: .medium, design: .rounded))
-                                    .tracking(-1.8).foregroundStyle(Palette.text).contentTransition(.numericText())
-                                    .lineLimit(1).minimumScaleFactor(0.6)
-                            }.frame(minHeight: 62, alignment: .leading).contentShape(Rectangle())
-                        }.buttonStyle(.plain).accessibilityLabel("Tokens today, \(fmtTokens(loads.todayTokens)). Log learning.")
-                        Spacer(minLength: 8)
-                        HStack(spacing: 2) {
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.25)) { prefs.isDark.toggle() }
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            } label: {
-                                Image(systemName: prefs.isDark ? "sun.max.fill" : "moon.fill")
-                                    .font(.system(size: 17, weight: .medium)).foregroundStyle(Palette.muted)
-                                    .frame(width: 44, height: 44).contentShape(Rectangle())
-                            }.buttonStyle(.plain)
-                                .accessibilityLabel(prefs.isDark ? "Switch to light" : "Switch to dark")
-                            Button { renderShare(); showShare = true } label: {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 17, weight: .medium)).foregroundStyle(Palette.muted)
-                                    .frame(width: 44, height: 44).contentShape(Rectangle())
-                            }.buttonStyle(.plain).accessibilityLabel("Share today")
-                            GearButton(action: onSettings).frame(width: 44, height: 44)
-                        }
-                    }
-                    .padding(.top, 10)
+            VStack(spacing: 0) {
+                header
+                Text(headline)
+                    .font(.system(size: 26, weight: .medium, design: .serif)).tracking(-0.8)
+                    .foregroundStyle(Palette.text).lineLimit(3).minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 12).padding(.bottom, 12)
+                    .contentTransition(.opacity)
 
-                    Text("Keep Larpy alive.")
-                        .font(.system(size: 32, weight: .medium, design: .serif)).tracking(-1.3)
-                        .foregroundStyle(Palette.text).padding(.top, 14)
+                let stageHeight: CGFloat = 252
+                LarpyCharacterView(life: life, base: .cream, kit: sceneKit,
+                                   width: 150, scene: todayScene, sceneCorner: 28, interactive: true,
+                                   fedTick: feedSequence, fedLane: fedLane, level: stats.workN, founderID: founderID)
+                    .frame(maxWidth: .infinity).frame(height: stageHeight)
+                captionBlock
 
-                    let stageHeight: CGFloat = 252
-                    LarpyCharacterView(life: life, base: .cream, kit: sceneKit,
-                                       width: 150, scene: todayScene, sceneCorner: 28, interactive: true,
-                                       fedTick: feedSequence, fedLane: fedLane, level: stats.workN, founderID: founderID)
-                        .frame(maxWidth: .infinity).frame(height: stageHeight)
-                    Text(store.todayCount == 0 ? "WAITING FOR EVIDENCE" : todayScene.caption)
-                        .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.7)
-                        .foregroundStyle(Palette.muted).padding(.top, 2)
-                        .frame(minHeight: 24).onTapGesture { showWardrobe = true }
+                if !dayZero { weekBlock } else { dayZeroLevel }
 
-                    VStack(spacing: 7) {
-                        HStack {
-                            Text("\(stats.todayCount)/3 today")
-                            Spacer()
-                            Text("\(stats.workN) out this week")
-                        }.font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.muted).monospacedDigit()
-                        GeometryReader { g in
-                            Capsule().fill(Palette.line).overlay(alignment: .leading) {
-                                Capsule().fill(Palette.gold)
-                                    .frame(width: g.size.width * min(1, CGFloat(stats.workN) / CGFloat(ShipLevel.next(stats.workN))))
-                            }
-                        }.frame(height: 4)
-                        HStack {
-                            Text(ShipLevel.title(stats.workN).uppercased()).tracking(1.4)
-                            Spacer()
-                            Text(stats.workN >= 7 ? "EARNED" : "NEXT AT \(ShipLevel.next(stats.workN))")
-                        }.font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(Palette.muted)
-                    }.padding(.top, 14).padding(.horizontal, 5)
+                if asksForIntent { intentField.padding(.top, 14) }
 
-                    Text(Voice.line(train: store.doneToday(.body), load: store.doneToday(.learn), ship: store.doneToday(.work), isEgg: store.logs.isEmpty, friendShipped: friendShipped))
-                        .font(.system(size: 14, weight: .medium)).foregroundStyle(Palette.text)
-                        .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 14)
-
-                    VStack(spacing: 8) {
-                        ForEach(QuestKind.allCases) { q in
-                            QuestRow(quest: q, latest: store.latestToday(for: q), hint: q.emptyHint, flash: flashLane == q) {
-                                prefillLoad = false; active = q
-                            }
-                        }
-                    }
-                }.padding(.horizontal, 26).padding(.top, 8).padding(.bottom, 24)
+                rows.padding(.top, 14)
+                firstReceiptPill
+                tailCard
+            }.padding(.horizontal, 26).padding(.top, 6).padding(.bottom, 24)
         }.scrollIndicators(.hidden)
         .background(Palette.bg.ignoresSafeArea())
         .sheet(item: $active) { quest in
-            LogSheet(quest: quest, store: store, loads: loads, prefillLoad: prefillLoad && quest == .learn)
+            LogSheet(quest: quest, store: store, loads: loads, prefillLoad: prefillLoad && quest == .learn, prefillNote: quest == .work ? prefillNote : "")
         }
-        .sheet(isPresented: $showWardrobe) { WardrobeView(store: store) }
+        .sheet(isPresented: $showWardrobe) { WardrobeView(store: store, prefs: prefs) }
         #if DEBUG
-        // Screenshot hook: `simctl launch <sim> com.larpy.app -openWardrobe`. Debug builds only.
+        // Screenshot hooks: `simctl launch <sim> com.larpy.app -openWardrobe` / `-openShare`. Debug builds only.
         .onAppear { if ProcessInfo.processInfo.arguments.contains("-openWardrobe") { showWardrobe = true } }
         .onAppear {
             guard ProcessInfo.processInfo.arguments.contains("-openShare") else { return }
@@ -1329,14 +1305,247 @@ private struct TodayView: View {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             withAnimation(.easeOut(duration: 0.2)) { flashLane = log.quest }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { withAnimation { flashLane = nil } }
+            // Week two, said once, on the first receipt day of the second calendar week.
+            if prefs.weekTwoLineDay.isEmpty, let first = store.logs.map(\.createdAt).min(),
+               let firstWeek = LarpyTime.cal.dateInterval(of: .weekOfYear, for: first),
+               let next = LarpyTime.cal.date(byAdding: .weekOfYear, value: 1, to: firstWeek.start),
+               LarpyTime.cal.isDate(.now, equalTo: next, toGranularity: .weekOfYear) {
+                prefs.weekTwoLineDay = todayKey
+            }
+            if prefs.firstReceiptAt == 0, log.isEligible { prefs.firstReceiptAt = log.createdAt.timeIntervalSince1970 }
         }
     }
-    @MainActor private func renderShare() {
-        let renderer = ImageRenderer(content: ShareCard(life: life, base: .cream, kit: sceneKit,
-                                                        name: prefs.name, loadLabel: fmtTokens(loads.todayTokens), ships: stats.workN,
-                                                        pips: QuestKind.allCases.map { store.doneToday($0) }, loadDetail: loads.todayDetail,
-                                                        founderID: founderID, scene: todayScene))
-        renderer.scale = 3; shareImage = renderer.uiImage
+
+    // MARK: pieces
+
+    private var header: some View {
+        HStack(alignment: .center) {
+            Text(dateLine).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(2)
+                .foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
+            Spacer(minLength: 8)
+            HStack(spacing: 2) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) { prefs.isDark.toggle() }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Image(systemName: prefs.isDark ? "sun.max.fill" : "moon.fill")
+                        .font(.system(size: 17, weight: .medium)).foregroundStyle(Palette.muted)
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel(prefs.isDark ? "Switch to light" : "Switch to dark")
+                if stats.todayCount >= 1 {
+                    Button { renderShare(); showShare = true } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 17, weight: .medium)).foregroundStyle(Palette.muted)
+                            .frame(width: 44, height: 44).contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityLabel("Share today")
+                        .transition(reduceMotion ? .identity : .opacity)
+                }
+                GearButton(action: onSettings).frame(width: 44, height: 44)
+            }
+        }
+        .frame(height: 44)
+        .animation(.easeOut(duration: 0.2), value: stats.todayCount)
+    }
+
+    @ViewBuilder private var captionBlock: some View {
+        VStack(spacing: 5) {
+            Text(caption)
+                .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.7)
+                .foregroundStyle(Palette.muted)
+            if let intent = intentForToday {
+                let done = stats.todayCount > 0
+                Button {
+                    prefillNote = done ? "" : intent; prefillLoad = false; active = .work
+                } label: {
+                    HStack(spacing: 6) {
+                        if !done { Circle().fill(Palette.gold).frame(width: 5, height: 5) }
+                        Text(intent)
+                            .font(done ? .system(size: 10, weight: .medium, design: .monospaced) : .system(size: 12, design: .serif).italic())
+                            .strikethrough(done, color: Palette.muted)
+                            .foregroundStyle(done ? Palette.muted : Palette.text)
+                            .lineLimit(1)
+                    }
+                }.buttonStyle(.plain).accessibilityLabel("Today's one thing: \(intent)")
+            }
+        }
+        .padding(.top, 8).frame(minHeight: 26)
+        .contentShape(Rectangle()).onTapGesture { showWardrobe = true }
+    }
+
+    /// Seven segments, one per day Monday to Sunday. Gold where Work landed. Dashed where the day hasn't come.
+    private var weekBlock: some View {
+        let cal = LarpyTime.cal
+        let today = cal.startOfDay(for: .now)
+        let monday = cal.dateInterval(of: .weekOfYear, for: today)?.start ?? today
+        let days = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: monday) }
+        return VStack(spacing: 7) {
+            HStack(spacing: 3) {
+                ForEach(days, id: \.self) { d in
+                    let future = d > today
+                    let shipped = LifeEngine.laneDone(store.logs, .work, on: d)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(shipped ? Palette.gold : future ? Color.clear : Palette.line)
+                        .overlay(RoundedRectangle(cornerRadius: 3).stroke(Palette.line, style: StrokeStyle(lineWidth: 1, dash: future ? [2, 2] : [])).opacity(future ? 1 : 0))
+                        .frame(height: 6)
+                        .accessibilityHidden(true)
+                }
+            }
+            HStack {
+                Text("\(stats.workN) out this week").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.text)
+                Spacer()
+                Text(stats.workN >= 7 ? "EARNED" : "NEXT AT \(ShipLevel.next(stats.workN))")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(Palette.muted)
+            }.monospacedDigit()
+            HStack {
+                Text(ShipLevel.title(stats.workN).uppercased()).tracking(1.4)
+                Spacer()
+                if let lastWorkLine { Text(lastWorkLine).tracking(1.2).lineLimit(1).minimumScaleFactor(0.7) }
+            }.font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(Palette.muted)
+        }.padding(.top, 14).padding(.horizontal, 2)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(stats.workN) Work receipts this week. \(ShipLevel.title(stats.workN)).")
+    }
+
+    private var dayZeroLevel: some View {
+        HStack {
+            Text("LARPING").tracking(1.4)
+            Spacer()
+            Text("FIRST PROOF AT 1")
+        }.font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(Palette.muted)
+            .padding(.top, 14).padding(.horizontal, 2)
+    }
+
+    /// One field, never a list. Tomorrow's one thing, also the Friday bet.
+    private var intentField: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                TextField("Tomorrow's one thing", text: $intentDraft)
+                    .font(.system(size: 17, design: .serif)).foregroundStyle(Palette.text)
+                    .submitLabel(.done).onSubmit(commitIntent)
+                    .onChange(of: intentDraft) { _, v in if v.count > 60 { intentDraft = String(v.prefix(60)) }; if v.contains("\n") { intentDraft = v.replacingOccurrences(of: "\n", with: " ") } }
+                HandDrawnUnderline().stroke(Palette.gold, style: StrokeStyle(lineWidth: 1.5, lineCap: .round)).frame(height: 5)
+            }
+            Button(action: commitIntent) {
+                Image(systemName: "arrow.right").font(.system(size: 14, weight: .bold)).foregroundStyle(Palette.ink)
+                    .frame(width: 32, height: 32).background(Palette.gold, in: Circle())
+            }.buttonStyle(.plain).disabled(intentDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                .opacity(intentDraft.trimmingCharacters(in: .whitespaces).isEmpty ? 0.35 : 1)
+                .accessibilityLabel("Keep tomorrow's one thing")
+        }
+    }
+    private func commitIntent() {
+        let t = intentDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        prefs.tomorrowIntent = t; prefs.tomorrowIntentFor = tomorrowKey; intentDraft = ""
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    @ViewBuilder private var rows: some View {
+        VStack(spacing: 8) {
+            if returnDoor && !lanesOpen {
+                QuestRow(quest: .work, latest: nil, hint: QuestKind.work.emptyHint, flash: flashLane == .work) { prefillLoad = false; active = .work }
+                Button { withAnimation(.easeOut(duration: 0.22)) { lanesOpen = true } } label: {
+                    HStack(spacing: 10) {
+                        ForEach([QuestKind.body, .learn], id: \.self) { q in
+                            Circle().stroke(q.tint.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [2, 2])).frame(width: 9, height: 9)
+                        }
+                        Text("Body · Learnt").font(.system(size: 14, weight: .medium)).foregroundStyle(Palette.muted)
+                        Spacer()
+                        Text("+").font(.system(size: 18, weight: .medium)).foregroundStyle(Palette.muted)
+                    }.padding(.horizontal, 15).frame(minHeight: 40)
+                        .background(Palette.card.opacity(0.4), in: RoundedRectangle(cornerRadius: 14))
+                        .contentShape(RoundedRectangle(cornerRadius: 14))
+                }.buttonStyle(.plain).accessibilityLabel("Body and Learnt. Open the rows.")
+            } else if dayZero && !lanesOpen {
+                QuestRow(quest: .work, latest: nil, hint: QuestKind.work.emptyHint, flash: false) { prefillLoad = false; active = .work }
+                Button { withAnimation(.easeOut(duration: 0.22)) { lanesOpen = true } } label: {
+                    Text("Body and Learnt count too. Only Work changes the level.")
+                        .font(.system(size: 12)).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity).padding(.top, 6)
+                }.buttonStyle(.plain)
+            } else {
+                ForEach(QuestKind.allCases) { q in
+                    let latest = store.latestToday(for: q)
+                    let hint = q == .learn && latest == nil && loads.todayTokens > 0 ? "\(fmtTokens(loads.todayTokens)) tokens" : q.emptyHint
+                    QuestRow(quest: q, latest: latest, hint: hint, flash: flashLane == q) {
+                        prefillLoad = q == .learn && loads.todayTokens == 0; prefillNote = ""; active = q
+                    }
+                }
+            }
+        }
+    }
+
+    /// After the first receipt ever: one pill, one person. Stays until the share sheet has opened once or the day ends.
+    @ViewBuilder private var firstReceiptPill: some View {
+        if !prefs.firstSharePillDone, let first = store.logs.last, LarpyTime.cal.isDateInToday(first.createdAt), store.logs.count <= 3 {
+            let img = shareImage ?? renderedShare()
+            if let img {
+                ShareLink(item: Image(uiImage: img), preview: SharePreview("Larpy · day one", image: Image(uiImage: img))) {
+                    Text("Screenshot this. Send it to one person.")
+                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.ink)
+                        .frame(maxWidth: .infinity, minHeight: 44).background(Palette.gold, in: Capsule())
+                }
+                .simultaneousGesture(TapGesture().onEnded { prefs.firstSharePillDone = true })
+                .padding(.top, 14)
+            }
+        }
+    }
+
+    /// The widget, offered inline, once. 'Later' and it never returns.
+    @ViewBuilder private var tailCard: some View {
+        if !dayZero, !prefs.widgetCardShown {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("He's hungry again at midnight.").font(.system(size: 18, weight: .medium, design: .serif)).foregroundStyle(Palette.text)
+                        Text("Put him on the Home Screen so you see it before I say it.").font(.system(size: 13)).foregroundStyle(Palette.muted)
+                    }
+                    Spacer(minLength: 0)
+                    VStack(spacing: 2) {
+                        LarpyCharacterView(life: life, base: .cream, kit: sceneKit, width: 34, showScene: false, level: stats.workN, founderID: founderID)
+                            .frame(width: 46, height: 50)
+                        Text("\(stats.workN)").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.text)
+                    }
+                }
+                HStack {
+                    Text("Hold the Home Screen · + · Larpy").font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.text)
+                    Spacer()
+                    Button("Later") { withAnimation { prefs.widgetCardShown = true } }
+                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.muted).buttonStyle(.plain)
+                }
+            }
+            .padding(18)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Palette.line, lineWidth: 1))
+            .padding(.top, 14)
+        }
+    }
+
+    @MainActor private func renderedShare() -> UIImage? {
+        let renderer = ImageRenderer(content: shareCard())
+        renderer.scale = 3
+        return renderer.uiImage
+    }
+    @MainActor private func shareCard() -> ShareCard {
+        let first = store.logs.count == 1
+        return ShareCard(life: life, base: .cream, kit: sceneKit,
+                         name: prefs.name, loadLabel: fmtTokens(loads.todayTokens), ships: stats.workN,
+                         pips: QuestKind.allCases.map { store.doneToday($0) }, loadDetail: loads.todayDetail,
+                         founderID: founderID, scene: todayScene,
+                         footer: first ? "DAY ONE · FIRST PROOF · \(store.logs.first.map { $0.proofKind == .link ? linkHost($0.value).uppercased() : "SCREENSHOT" } ?? "")" : nil)
+    }
+    @MainActor private func renderShare() { shareImage = renderedShare() }
+}
+
+/// One Path, two off control points, drawn once. The gold line under tomorrow's one thing.
+private struct HandDrawnUnderline: Shape {
+    func path(in r: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: r.minX, y: r.midY + 1))
+        p.addCurve(to: CGPoint(x: r.maxX, y: r.midY),
+                   control1: CGPoint(x: r.width * 0.30, y: r.minY - 1),
+                   control2: CGPoint(x: r.width * 0.72, y: r.maxY + 1))
+        return p
     }
 }
 
@@ -1391,26 +1600,34 @@ private struct LogSheet: View {
     @ObservedObject var store: ProofStore
     @ObservedObject var loads: LoadLedger
     var prefillLoad = false
+    var prefillNote = ""
+    @State private var rejecting = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .center) {
                         Text(quest.title.uppercased())
                             .font(.system(size: 13, weight: .semibold)).kerning(3)
-                            .foregroundStyle(quest.tint)
-
+                            .foregroundStyle(quest == .work ? Palette.gold : quest.tint)
+                        Spacer()
+                        // The egg watches. It slumps while the field holds a sentence instead of a link.
+                        LarpyCharacterView(life: rejecting ? .neutralAsleep : LifeEngine.life(store.logs), base: .cream,
+                                           kit: SceneWardrobe.kit(for: store.logsOn(.now)), width: 30, showScene: false)
+                            .frame(width: 40, height: 44)
+                            .animation(.easeOut(duration: 0.3), value: rejecting)
                     }
+                    .overlay(alignment: .top) { Rectangle().fill(quest == .work ? Palette.gold : Palette.line).frame(height: 2).offset(y: -12) }
 
                     switch quest {
                     case .body: TrainContent(store: store) { dismiss() }
                     case .learn: LoadContent(store: store, loads: loads, prefill: prefillLoad) { dismiss() }
-                    case .work: ShipContent(store: store) { dismiss() }
+                    case .work: ShipContent(store: store, prefillNote: prefillNote, rejecting: $rejecting) { dismiss() }
                     }
                 }
-                .padding(22)
+                .padding(22).padding(.top, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(Palette.bg.ignoresSafeArea())
@@ -1528,34 +1745,76 @@ private struct LoadContent: View {
 
 private struct ShipContent: View {
     @ObservedObject var store: ProofStore
+    var prefillNote = ""
+    @Binding var rejecting: Bool
     let done: () -> Void
     @State private var url = ""
     @State private var note = ""
     @State private var showCamera = false
     @State private var error = ""
+    @State private var showRejection = false
+    @State private var copiedLink: String?
+    @State private var clipboardHasURL = false
     private var hasNote: Bool { !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var valid: Bool { isValidURL(url) }
+    /// The same site again. Still allowed, just named.
+    private var repeatHost: Bool {
+        guard valid else { return false }
+        let host = linkHost(url)
+        return store.logs.contains { $0.quest == .work && $0.proofKind == .link && linkHost($0.value) == host }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("LEFT THE BUILDING").font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(2)
-                Spacer(); Image(systemName: "arrow.up.right")
-            }.foregroundStyle(Palette.ink).padding(14).background(Palette.gold.opacity(0.55))
-                .rotationEffect(.degrees(-2))
             Text("Show me the thing.").font(.system(size: 29, design: .serif)).foregroundStyle(Palette.text)
+            if clipboardHasURL, copiedLink == nil {
+                Button {
+                    // User-initiated read. The system paste notice is the honest price of one tap.
+                    if let s = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines), isValidURL(s) { url = s; copiedLink = s }
+                    else { clipboardHasURL = false }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "link").font(.system(size: 13, weight: .semibold))
+                        Text("Use copied link").font(.system(size: 14, weight: .semibold))
+                        Spacer()
+                        Image(systemName: "arrow.down.left").font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(Palette.ink).padding(.horizontal, 14).frame(minHeight: 40)
+                    .background(Palette.gold, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }.buttonStyle(.plain)
+            }
             LinkField(text: $url, placeholder: "PR / TestFlight / live post / launch URL", autoFocus: false)
+            if showRejection {
+                Text("A sentence isn't a receipt. Paste the link or attach a screenshot.")
+                    .font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.ink)
+                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    .background(Palette.gold.opacity(0.12), in: Capsule())
+                    .transition(.opacity)
+            }
             SmallButton("Attach a screenshot") { showCamera = true }
             NoteField(text: $note, placeholder: "What left the building? (optional)")
-            if !url.isEmpty && !isValidURL(url) {
-                Text("A web link, including its domain. A sentence won't pass.").font(.system(size: 12)).foregroundStyle(Palette.train)
-            }
-            BigButton(isValidURL(url) ? "Log Work" : hasNote ? "Save to Learnt instead" : "Log Work", icon: "arrow.up.right") {
-                let shipped = isValidURL(url)
+            BigButton(valid ? (repeatHost ? "Already counted. New link?" : "Log Work") : hasNote ? "Save to Learnt instead" : "Log Work", icon: "arrow.up.right") {
+                let shipped = valid
                 if store.logTextProof(quest: shipped ? .work : .learn, proofKind: shipped ? .link : .number,
                                       value: shipped ? url : "note: \(note)", annotation: shipped ? note : nil) { done() }
                 else { error = store.errorMessage ?? "Couldn't file this receipt." }
-            }.disabled(!isValidURL(url) && !hasNote).opacity(isValidURL(url) || hasNote ? 1 : 0.4)
+            }.disabled(!valid && !hasNote).opacity(valid || hasNote ? 1 : 0.4)
             Text("PR. Closed deal. Sent email. Something someone else can see.").font(.system(size: 12)).foregroundStyle(Palette.muted)
             if !error.isEmpty { Text(error).font(.system(size: 12)).foregroundStyle(Palette.train) }
+        }
+        .onAppear {
+            note = prefillNote
+            clipboardHasURL = UIPasteboard.general.hasURLs || UIPasteboard.general.hasStrings && UIPasteboard.general.contains(pasteboardTypes: ["public.url"])
+        }
+        .onChange(of: url) { _, v in
+            let bad = !v.trimmingCharacters(in: .whitespaces).isEmpty && !isValidURL(v)
+            rejecting = bad
+            guard bad else { withAnimation(.easeOut(duration: 0.2)) { showRejection = false }; return }
+            let snapshot = v
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                if url == snapshot, !isValidURL(url), !url.trimmingCharacters(in: .whitespaces).isEmpty {
+                    withAnimation(.easeOut(duration: 0.2)) { showRejection = true }
+                }
+            }
         }
         .sheet(isPresented: $showCamera) {
             CameraPicker(preferLibrary: true) { image in
@@ -1743,12 +2002,10 @@ private struct WeekView: View {
     @ObservedObject var loads: LoadLedger
     let onSettings: () -> Void
     @State private var detailDay: Date?
-    @State private var sentence = ""
-    @State private var asking = false
     @State private var shareImage: UIImage?
     @State private var showWardrobe = false
 
-    /// Mon…Sun of the current week (Europe/Dublin).
+    /// Mon…Sun of the current week.
     private var days: [Date] {
         var cal = LarpyTime.cal; cal.firstWeekday = 2
         let today = cal.startOfDay(for: .now)
@@ -1759,17 +2016,26 @@ private struct WeekView: View {
 
     private var today: Date { LarpyTime.startOfToday() }
     private var isEmpty: Bool { days.allSatisfy { store.count(on: $0) == 0 } }
-    private var daysAlive: Int { days.filter { store.count(on: $0) > 0 }.count }
+    private var daysSoFar: [Date] { days.filter { $0 <= today } }
+    private var daysAlive: Int { daysSoFar.filter { store.count(on: $0) > 0 }.count }
+    private var holes: Int { daysSoFar.filter { !LifeEngine.laneDone(store.logs, .work, on: $0) }.count }
     private var shipsThisWeek: Int { LifeEngine.stats(store.logs).workN }
     private func lanes(on day: Date) -> [Bool] { QuestKind.allCases.map { LifeEngine.laneDone(store.logs, $0, on: day) } }
 
-    /// The flex still: Larpy in today's costume + LOAD + ships this week. Rendered on device, shared as an image.
+    /// One sentence from counts. No model, no key, nothing to disclose.
+    private var verdict: String {
+        let weekday = LarpyTime.cal.component(.weekday, from: .now)   // 1 = Sunday
+        let closing = weekday == 6 || weekday == 7 || weekday == 1
+        if closing { return "\(daysAlive) of 7 days had receipts. \(shipsThisWeek) shipped. \(holes) still larping." }
+        return "\(daysAlive) of \(daysSoFar.count) so far. \(shipsThisWeek) shipped."
+    }
+
     @MainActor private func renderShareCard() -> UIImage? {
         let card = ShareCard(life: LifeEngine.life(store.logs), base: prefs.base, kit: SceneWardrobe.kit(for: store.logsOn(.now), fallback: prefs.kit),
                              name: prefs.name, loadLabel: fmtTokens(loads.todayTokens), ships: shipsThisWeek,
                              pips: QuestKind.allCases.map { store.doneToday($0) }, loadDetail: loads.todayDetail,
                              founderID: store.logsOn(.now).first?.founderID,
-                             scene: MovieScene.forToday(store.logsOn(.now), workThisWeek: shipsThisWeek, fallbackKit: prefs.kit))
+                             scene: MovieScene.forToday(store.logsOn(.now), allLogs: store.logs, workThisWeek: shipsThisWeek, fallbackKit: prefs.kit, paused: !Larp.wardrobeOpen))
         let r = ImageRenderer(content: card)
         r.scale = 3
         return r.uiImage
@@ -1788,20 +2054,15 @@ private struct WeekView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                HStack(alignment: .top) {
-                    Text("Seven days of proof.")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundStyle(Palette.text)
-                    Spacer()
-                    GearButton(action: onSettings).padding(.top, 4)
-                }
+                Text("Seven days of proof.")
+                    .font(.system(size: 30, weight: .medium, design: .serif)).tracking(-1)
+                    .foregroundStyle(Palette.text)
 
                 if isEmpty {
                     VStack(spacing: 10) {
-                        // tired, not asleep — eyes stay open
                         LarpyCharacterView(life: .neutralAsleep, base: prefs.base, blush: prefs.blush,
-                                           kit: prefs.kit, width: 180, interactive: true)
-                            .frame(height: 220)
+                                           kit: prefs.kit, width: 150, interactive: true)
+                            .frame(height: 210)
                         Text("No receipts. Still larping.")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Palette.muted)
@@ -1818,11 +2079,19 @@ private struct WeekView: View {
                         }
                     }
 
-                    HStack {
-                        Text("\(shipsThisWeek) pieces of Work. Out in the world.")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    Text(verdict)
+                        .font(.system(size: 20, weight: .medium, design: .serif)).tracking(-0.4)
+                        .foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 16) {
+                        Text("\(shipsThisWeek) pieces of Work.")
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Palette.text)
                         Spacer()
+                        Button { showWardrobe = true } label: {
+                            Text("Looks").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.gold)
+                        }.buttonStyle(.plain)
                         if let img = shareImage {
                             ShareLink(item: Image(uiImage: img), preview: SharePreview("Larpy — today", image: Image(uiImage: img))) {
                                 Text("Share today").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.gold)
@@ -1831,69 +2100,22 @@ private struct WeekView: View {
                     }
                     .onAppear { shareImage = renderShareCard() }
                     .onChange(of: store.logs.first?.id) { _, _ in shareImage = renderShareCard() }
-
-                    if keys.anyAvailable {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Button { ask() } label: {
-                                HStack(spacing: 8) {
-                                    if asking { ProgressView().tint(Palette.bg) }
-                                    Text(asking ? "Asking…" : "Ask an agent")
-                                        .font(.system(size: 15, weight: .semibold))
-                                }
-                                .foregroundStyle(Palette.muted)
-                                .frame(maxWidth: .infinity).frame(minHeight: 48)
-                                .background(Palette.card.opacity(0.4), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(asking)
-                            if !sentence.isEmpty {
-                                Text(sentence)
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(Palette.text)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .padding(.top, 6)
-                    }
                 }
-                Button { showWardrobe = true } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Your characters").font(.system(size: 20, weight: .semibold))
-                            Text("\(Set(store.logs.compactMap(\.founderID)).count) / \(FounderLook.all.count) earned").font(.system(size: 14)).foregroundStyle(Palette.muted)
-                        }
-                        Spacer(); Image(systemName: "arrow.up.right")
-                    }.foregroundStyle(Palette.text).padding(20).background(Palette.card, in: RoundedRectangle(cornerRadius: 18))
-                }.buttonStyle(.plain)
+                if isEmpty {
+                    Button { showWardrobe = true } label: {
+                        Text("Looks").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.gold)
+                    }.buttonStyle(.plain)
+                }
                 AchievementSection(store: store)
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Palette.bg.ignoresSafeArea())
-        .sheet(isPresented: $showWardrobe) { WardrobeView(store: store) }
+        .sheet(isPresented: $showWardrobe) { WardrobeView(store: store, prefs: prefs) }
         .sheet(item: Binding(get: { detailDay.map { IdentifiableDate(date: $0) } },
                              set: { detailDay = $0?.date })) { wrapped in
             DayDetail(day: wrapped.date, store: store)
-        }
-    }
-
-    private func ask() {
-        let provider = keys.canRun(prefs.provider) ? prefs.provider
-            : (Provider.allCases.first { keys.canRun($0) } ?? prefs.provider)
-        let f = DateFormatter(); f.calendar = LarpyTime.cal; f.dateFormat = "EEE"
-        let input = days.filter { $0 <= today }.map { day in
-            (label: f.string(from: day),
-             proofs: store.logsOn(day).map { "\($0.quest.rawValue) \(summaryChip($0))" })
-        }
-        asking = true; sentence = ""
-        Task {
-            do {
-                let r = try await WeekAgent.sentence(days: input, provider: provider, key: keys.key(for: provider))
-                sentence = r.text
-                agents.recordSpend(r.spend, provider: provider.label)   // model spend, not LOAD
-            } catch { sentence = error.localizedDescription }
-            asking = false
         }
     }
 }
@@ -1911,6 +2133,8 @@ private struct ShareCard: View {
     var founderID: String? = nil
     /// The share image carries the same room the app is showing — the scene is the picture.
     var scene: MovieScene? = nil
+    /// Day-one override for the footer line.
+    var footer: String? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1943,7 +2167,7 @@ private struct ShareCard: View {
             }
             Text("\(ships) out in the world this week.")
                 .font(.system(size: 25, design: .serif)).padding(.top, 14)
-            Text("\(ShipLevel.title(ships).uppercased()) · \(name.isEmpty || name == "You" ? "LARP MAXING" : name.uppercased())")
+            Text(footer ?? "\(ShipLevel.title(ships).uppercased()) · \(name.isEmpty || name == "You" ? "LARP MAXING" : name.uppercased())")
                 .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.4).padding(.top, 8)
             Spacer(minLength: 10)
         }
@@ -2007,28 +2231,41 @@ private struct FaceSlot: View {
 private struct DayDetail: View {
     let day: Date
     @ObservedObject var store: ProofStore
+    private var room: String? {
+        guard let first = store.logsOn(day).first else { return nil }
+        if let id = first.sceneID, let scene = MovieScene(rawValue: id) { return scene.title }
+        return MovieScene.forLane(first.quest, seed: 0).title
+    }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text(day.formatted(date: .abbreviated, time: .omitted))
-                    .font(.system(size: 28, design: .serif)).foregroundStyle(Palette.text)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(day.formatted(date: .abbreviated, time: .omitted))
+                        .font(.system(size: 28, design: .serif)).foregroundStyle(Palette.text)
+                    if let room {
+                        Text(room.uppercased()).font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.6).foregroundStyle(Palette.muted)
+                    }
+                }
                 ForEach(QuestKind.allCases) { quest in
                     let receipts = store.logsOn(day).filter { $0.quest == quest }
-                    Text(quest.title.uppercased()).font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(2).foregroundStyle(quest.tint)
+                    Text(quest.title.uppercased()).font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(2).foregroundStyle(quest == .work ? Palette.gold : quest.tint)
                     if receipts.isEmpty { Text("The hole is still here.").font(.system(size: 13)).foregroundStyle(Palette.muted) }
                     ForEach(receipts) { log in
-                        VStack(alignment: .leading, spacing: 8) {
-                            if let url = store.photoURL(for: log), let image = UIImage(contentsOfFile: url.path) {
-                                Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 240).clipShape(RoundedRectangle(cornerRadius: 12))
+                        HStack(alignment: .top, spacing: 12) {
+                            RoundedRectangle(cornerRadius: 1.5).fill(quest == .work ? Palette.gold : quest.tint).frame(width: 3)
+                            VStack(alignment: .leading, spacing: 8) {
+                                if let url = store.photoURL(for: log), let image = UIImage(contentsOfFile: url.path) {
+                                    Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 200).clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                                if log.proofKind == .link, let url = ReceiptRules.webURL(log.value) {
+                                    Link(destination: url) { Label(log.value, systemImage: "arrow.up.right").font(.system(size: 13)).lineLimit(2) }.tint(Palette.text)
+                                } else { Text(log.value.replacingOccurrences(of: "note: ", with: "")).font(.system(size: 14)).foregroundStyle(Palette.text) }
+                                if let use = log.annotation, !use.isEmpty {
+                                    Text(use).font(.system(size: 14, design: .serif)).foregroundStyle(Palette.muted)
+                                }
+                                Text(log.createdAt.formatted(date: .omitted, time: .shortened)).font(.system(size: 10, design: .monospaced)).foregroundStyle(Palette.muted)
                             }
-                            if log.proofKind == .link, let url = ReceiptRules.webURL(log.value) {
-                                Link(destination: url) { Label(log.value, systemImage: "arrow.up.right").font(.system(size: 13)).lineLimit(2) }.tint(Palette.text)
-                            } else { Text(log.value.replacingOccurrences(of: "note: ", with: "")).font(.system(size: 14)).foregroundStyle(Palette.text) }
-                            if let use = log.annotation, !use.isEmpty {
-                                Text(use).font(.system(size: 14, design: .serif)).foregroundStyle(Palette.muted)
-                            }
-                            Text(log.createdAt.formatted(date: .omitted, time: .shortened)).font(.system(size: 10, design: .monospaced)).foregroundStyle(Palette.muted)
-                        }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Palette.card, in: RoundedRectangle(cornerRadius: 14))
+                        }.frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }.padding(24)
@@ -2162,7 +2399,7 @@ struct InviteView: View {
                                    kit: prefs.kit, width: 170, interactive: true)
                     .frame(height: 210)
                 Text("Pick your witness.")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.system(size: 32, weight: .bold))
                     .foregroundStyle(Palette.text)
                     .multilineTextAlignment(.center)
                     .padding(.top, 6)
@@ -2203,95 +2440,6 @@ struct InviteView: View {
 }
 
 /// Peak-End: leave the first session with Larpy on the Home Screen. Mood from receipts only.
-struct WidgetCardView: View {
-    @ObservedObject var prefs: Prefs
-    @ObservedObject var store: ProofStore
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: 18) {
-            Text("Add Larpy to your Home Screen.")
-                .font(.system(size: 24, weight: .bold, design: .rounded)).foregroundStyle(Palette.text)
-                .multilineTextAlignment(.center)
-            // What the small widget looks like: face + ships this week
-            HStack(spacing: 10) {
-                LarpyCharacterView(life: LifeEngine.life(store.logs), base: prefs.base, blush: prefs.blush,
-                                   kit: prefs.kit, width: 66, showScene: false)
-                    .frame(width: 74, height: 74)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(LifeEngine.stats(store.logs).workN)")
-                        .font(.system(size: 30, weight: .bold, design: .rounded)).foregroundStyle(Palette.text)
-                    Text("ships\nthis week").font(.system(size: 11, weight: .semibold)).foregroundStyle(Palette.muted)
-                }
-            }
-            .padding(16)
-            .frame(width: 172, height: 172)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(Palette.line, lineWidth: 1))
-            Text("Hold the Home Screen · tap + · search Larpy.")
-                .font(.system(size: 14, weight: .medium)).foregroundStyle(Palette.text)
-            Text("Fed or hungry, from your receipts. Nothing else is read.")
-                .font(.system(size: 12)).foregroundStyle(Palette.muted)
-            IconChoices(prefs: prefs)
-            BigButton("Keep him close", icon: "checkmark") { dismiss() }
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity)
-        .background(Palette.bg.ignoresSafeArea())
-        .presentationDetents([.large])
-    }
-}
-
-/// After the first Ship: the icon is the costume flex. Three faces, no settings archaeology.
-struct IconOfferView: View {
-    @ObservedObject var prefs: Prefs
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: 18) {
-            Text("Icon is the costume.")
-                .font(.system(size: 24, weight: .bold, design: .rounded)).foregroundStyle(Palette.text)
-            Text("You did the Work. Pick the face on your Home Screen.")
-                .font(.system(size: 14)).foregroundStyle(Palette.muted)
-            IconChoices(prefs: prefs)
-            BigButton("Done", icon: "checkmark") { dismiss() }
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity)
-        .background(Palette.bg.ignoresSafeArea())
-        .presentationDetents([.height(360)])
-    }
-}
-
-/// Default · Hungry · Jobs. Shared by the offer sheet and Settings row 2.
-struct IconChoices: View {
-    @ObservedObject var prefs: Prefs
-    var body: some View {
-        HStack(spacing: 16) {
-            ForEach(LarpyIcon.all, id: \.id) { o in
-                Button {
-                    prefs.iconChoice = o.id
-                    LarpyIcon.apply(o.id, userChosen: true)
-                } label: {
-                    VStack(spacing: 8) {
-                        Image(uiImage: UIImage(named: o.asset) ?? UIImage())
-                            .resizable().scaledToFit()
-                            .frame(width: 68, height: 68)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(prefs.iconChoice == o.id ? Palette.gold : Palette.line, lineWidth: 2))
-                        Text(o.label).font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(prefs.iconChoice == o.id ? Palette.text : Palette.muted)
-                    }
-                    .frame(minWidth: 72, minHeight: 48)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-}
-
-/// Alternate icons. The user's pick always wins; the once-a-day rule is for automatic swaps only.
 enum LarpyIcon {
     static let all: [(id: String, label: String, asset: String)] = [
         ("", "Default", "LarpyPrimary"),
@@ -2389,7 +2537,7 @@ struct DraftSheet: View {
                     Text(lane == .work ? "WORK" : "LEARNT")
                         .font(.system(size: 13, weight: .semibold)).kerning(3).foregroundStyle(lane.tint)
                     Text(lane == .work ? "Log Work" : "Log learning")
-                        .font(.system(size: 26, weight: .bold, design: .rounded)).foregroundStyle(Palette.text)
+                        .font(.system(size: 26, weight: .bold)).foregroundStyle(Palette.text)
 
                     // What came in
                     HStack(spacing: 12) {
@@ -2498,27 +2646,6 @@ enum WidgetBridge {
                                   ships: s.workN, lastReceipt: last, name: prefs.name, updatedAt: .now)
         UserDefaults(suiteName: suite)?.set(try? JSONEncoder().encode(snap), forKey: "snapshot")
         WidgetCenter.shared.reloadAllTimelines()
-    }
-}
-
-// MARK: - Reusable Look controls
-
-struct BaseSwatches: View {
-    @Binding var baseID: String
-    var body: some View {
-        HStack(spacing: 12) {
-            ForEach(LarpyBase.allCases) { base in
-                Button {
-                    withAnimation(.snappy(duration: 0.25)) { baseID = base.rawValue }
-                } label: {
-                    Circle().fill(base.color)
-                        .frame(width: 44, height: 44)
-                        .overlay(Circle().stroke(baseID == base.rawValue ? Palette.gold : Palette.line,
-                                                 lineWidth: baseID == base.rawValue ? 3 : 1))
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 }
 
@@ -2661,8 +2788,16 @@ struct SettingsView: View {
     @ObservedObject var keys: AgentKeys
     @Environment(\.dismiss) private var dismiss
     @State private var confirmSignOut = false
+    @State private var showAsk = false
 
     private var rowFont: Font { .system(size: 16, weight: .medium) }
+    private var hasShipped: Bool { store.logs.contains { $0.quest == .work && $0.isEligible } }
+    private var wardrobeLine: String {
+        if Larp.unlocked { return "Yours. It never renews." }
+        if !Larp.wardrobeOpen { return "Paused. Looks and rooms are holding." }
+        if let days = Larp.daysLeft { return days == 0 ? "Last free day." : "Free for \(days) more day\(days == 1 ? "" : "s")." }
+        return "Free. The first receipt starts the month."
+    }
 
     var body: some View {
         NavigationStack {
@@ -2694,7 +2829,7 @@ struct SettingsView: View {
                     HStack {
                         Text("Costume").font(.system(size: 14)).foregroundStyle(Palette.muted)
                         Spacer()
-                        Picker("Costume", selection: Binding(
+                        Picker("", selection: Binding(
                             get: { Costume.from(kit: prefs.kit).rawValue },
                             set: { prefs.kitID = (Costume(rawValue: $0) ?? .cursor).kit.rawValue })) {
                             ForEach(Costume.allCases) { c in Text(c.label).tag(c.rawValue) }
@@ -2705,10 +2840,10 @@ struct SettingsView: View {
                     HStack {
                         Text("Icon").font(.system(size: 14)).foregroundStyle(Palette.muted)
                         Spacer()
-                        Picker("Icon", selection: Binding(
+                        Picker("", selection: Binding(
                             get: { prefs.iconChoice },
                             set: { prefs.iconChoice = $0; LarpyIcon.apply($0, userChosen: true) })) {
-                            ForEach(LarpyIcon.all, id: \.id) { o in Text(o.label).tag(o.id) }
+                            ForEach(LarpyIcon.all.filter { Larp.wardrobeOpen || $0.id.isEmpty }, id: \.id) { o in Text(o.label).tag(o.id) }
                         }
                         .pickerStyle(.menu)
                         .tint(Palette.gold)
@@ -2718,12 +2853,30 @@ struct SettingsView: View {
                 .frame(minHeight: 44)
                 .listRowBackground(Palette.card)
 
+                // 2b · Wardrobe: the only thing for sale, reached from here and the paused card. Never automatic.
+                Button { showAsk = true } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Wardrobe").font(rowFont).foregroundStyle(Palette.text)
+                            Text(wardrobeLine).font(.system(size: 11)).foregroundStyle(Palette.muted)
+                        }
+                        Spacer()
+                        Text(Larp.unlocked ? "Kept" : Larp.fallbackPrice + " once").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.gold)
+                    }
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(Palette.card)
+
                 // 3 · Agents
                 NavigationLink {
                     AgentsView(prefs: prefs, keys: keys)
                 } label: {
                     HStack {
-                        Text("Agents").font(rowFont).foregroundStyle(Palette.text)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Agents").font(rowFont).foregroundStyle(Palette.text)
+                            Text("Your own key. A model reads your week when you ask.").font(.system(size: 11)).foregroundStyle(Palette.muted)
+                        }
                         Spacer()
                         Text(agentsSummary).font(.system(size: 14)).foregroundStyle(Palette.muted)
                     }
@@ -2736,7 +2889,7 @@ struct SettingsView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Tokens").font(rowFont).foregroundStyle(Palette.text)
-                            Text("model spend · Ask an agent").font(.system(size: 11)).foregroundStyle(Palette.muted)
+                            Text("model spend · your own key").font(.system(size: 11)).foregroundStyle(Palette.muted)
                         }
                         Spacer()
                         Text("\(fmtTokens(agents.modelTokensThisWeek)) this week")
@@ -2760,6 +2913,29 @@ struct SettingsView: View {
                 .listRowBackground(Palette.card)
                 .onChange(of: prefs.notificationsOn) { if prefs.notificationsOn { LarpyReminders.requestAuthorization() }; LarpyReminders.refresh(store: store, agents: agents) }
 
+                // 5b · Feedback, hidden until the first completed Work. Rows the user opens, never a prompt.
+                if hasShipped {
+                    if !Feedback.appStoreID.isEmpty {
+                        Button { Feedback.rate() } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Rate Larpy").font(rowFont).foregroundStyle(Palette.text)
+                                Text("Leave a receipt on the App Store.").font(.system(size: 11)).foregroundStyle(Palette.muted)
+                            }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        }.buttonStyle(.plain).listRowBackground(Palette.card)
+                    }
+                    Button { Feedback.ask(store: store) } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Ask for something").font(rowFont).foregroundStyle(Palette.text)
+                            Text("One line. It gets read.").font(.system(size: 11)).foregroundStyle(Palette.muted)
+                        }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }.buttonStyle(.plain).listRowBackground(Palette.card)
+                }
+
+                // 5c · Where the receipts live. One sentence, no account.
+                Text("Receipts live on this phone. Deleting the app deletes them.")
+                    .font(.system(size: 12)).foregroundStyle(Palette.muted)
+                    .listRowBackground(Color.clear)
+
                 // 6 · Sign out (no account: clears keys and name on this phone, keeps proofs)
                 Button(role: .destructive) { confirmSignOut = true } label: {
                     Text("Sign out").font(rowFont).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
@@ -2771,6 +2947,7 @@ struct SettingsView: View {
             .background(Palette.bg.ignoresSafeArea())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showAsk) { AskView(store: store, prefs: prefs) }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }.tint(Palette.gold)
@@ -2860,183 +3037,11 @@ struct AgentsView: View {
 // MARK: - Onboarding (first launch)
 
 /// Two steps (Hick): how he looks, then the 2-field profile a friend will see. Inviting comes after the first receipt.
-struct OnboardingView: View {
-    @ObservedObject var prefs: Prefs
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var step = 0
-
-    var body: some View {
-        ZStack {
-            Palette.bg.ignoresSafeArea()
-            VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button { finish() } label: {
-                        Text("Do this later")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Palette.muted)
-                            .frame(minWidth: 44, minHeight: 44)   // 44×44 hit target
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 12).padding(.top, 8)
-
-                TabView(selection: $step) {
-                    lookStep.tag(0)
-                    profileStep.tag(1)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .always))
-            }
-        }
-    }
-
-    private func finish() { prefs.hasOnboarded = true; dismiss() }
-
-    private func header(_ kicker: String, _ title: String) -> some View {
-        VStack(spacing: 6) {
-            Text(kicker).font(.system(size: 13, weight: .semibold)).kerning(3).foregroundStyle(Palette.gold)
-            Text(title).font(.system(size: 26, weight: .bold, design: .rounded)).foregroundStyle(Palette.text)
-                .multilineTextAlignment(.center)
-        }
-    }
-
-    private func nextButton(_ title: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.system(size: 16, weight: .semibold)).foregroundStyle(Palette.bg)
-                .frame(maxWidth: .infinity).padding(.vertical, 15)
-                .background(Palette.gold, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var lookStep: some View {
-        VStack(spacing: 20) {
-            header("STEP 1", "Pick your Larpy")
-            LarpyCharacterView(life: .neutral, base: prefs.base, blush: prefs.blush,
-                               kit: prefs.kit, width: 150, interactive: true)
-                .frame(height: 160)
-            BaseSwatches(baseID: $prefs.baseID)
-            KitChips(kitID: $prefs.kitID)
-            Toggle(isOn: $prefs.blush) {
-                Text("Blush").font(.system(size: 14, weight: .medium)).foregroundStyle(Palette.text)
-            }.tint(Palette.gold).frame(maxWidth: 220)
-            Spacer()
-            nextButton("Next") { withAnimation { step = 1 } }
-        }
-        .padding(28)
-    }
-
-    /// The whole profile. Two fields. A friend sees these next to your week.
-    private var profileStep: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            header("STEP 2", "Two fields.").frame(maxWidth: .infinity)
-            FieldRow(title: "Name", text: $prefs.name, placeholder: "what your friend calls you")
-            FieldRow(title: "Shipping", text: $prefs.shipping, placeholder: "one line — what you're shipping")
-            Text("That's the profile. One friend sees it next to your receipts.")
-                .font(.system(size: 13)).foregroundStyle(Palette.muted)
-            Spacer()
-            nextButton("Start") { finish() }
-        }
-        .padding(28)
-    }
-}
-
-private struct NextRow: View {
-    let title: String
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(title).font(.system(size: 15, weight: .medium)).foregroundStyle(Palette.text)
-                Spacer()
-                Text("next").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.muted)
-                Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(Palette.muted)
-            }
-            .padding(16)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-enum NextKind: String, Identifiable {
-    case connectAI, gymLock, github, desktop
-    var id: String { rawValue }
-
-    @ViewBuilder var view: some View {
-        switch self {
-        case .connectAI: NextScreen.connectAI
-        case .gymLock: NextScreen.gymLock
-        case .github: NextScreen.github
-        case .desktop: NextScreen.desktop
-        }
-    }
-}
-
-enum NextScreen {
-    static var connectAI: some View {
-        NextDetail(
-            title: "Connect AI",
-            lines: [
-                "Paste your daily token count from the Claude / Cursor / Grok usage page into the Work sheet — it logs as a Work proof.",
-                "No sign-in, no OAuth, no API keys. A Mac companion that reads it for you is a later pass."
-            ]
-        )
-    }
-    static var gymLock: some View {
-        NextDetail(
-            title: "Gym lock",
-            lines: [
-                "Start a Body session and everything but Spotify gets shielded until you finish with a photo.",
-                "This needs Apple Screen Time access, so it lands in a later pass on a real device."
-            ]
-        )
-    }
-    static var github: some View {
-        NextDetail(
-            title: "GitHub",
-            lines: [
-                "Sign in once and a merged PR counts as your Work proof automatically.",
-                "Needs GitHub OAuth and a backend — a later pass."
-            ]
-        )
-    }
-    static var desktop: some View {
-        NextDetail(
-            title: "Desktop extension",
-            lines: [
-                "Log proof from your browser without opening the phone.",
-                "A Safari / Chrome extension is its own build — a later pass."
-            ]
-        )
-    }
-}
-
-private struct NextDetail: View {
-    let title: String
-    let lines: [String]
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(title).font(.system(size: 24, weight: .bold, design: .rounded)).foregroundStyle(Palette.text)
-            ForEach(lines, id: \.self) { line in
-                Text(line).font(.system(size: 16)).foregroundStyle(Palette.muted)
-            }
-            Text("next").font(.system(size: 13, weight: .bold)).foregroundStyle(Palette.gold).padding(.top, 4)
-            Spacer()
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.bg.ignoresSafeArea())
-        .presentationDetents([.medium])
-    }
-}
-
 // MARK: - One actor, four scenes. The face is never a costume surface.
 
 enum ShipLevel {
     static func title(_ ships: Int) -> String {
-        switch ships { case 0: "all costume"; case 1..<3: "first proof"; case 3..<7: "repeat offender"; default: "real enough" }
+        switch ships { case 0: "larping"; case 1..<3: "first proof"; case 3..<7: "repeat offender"; default: "real enough" }
     }
     static func next(_ ships: Int) -> Int { ships < 1 ? 1 : ships < 3 ? 3 : 7 }
 }
@@ -3121,11 +3126,21 @@ struct LarpyCharacterView: View {
             actor(w: w, blink: blink, phase: phase)
                 .scaleEffect(x: 1 + breathe + squash * 0.12 + poke * 0.045,
                              y: (hungry ? 0.91 : 1) + breathe - squash * 0.13 + poke * 0.045, anchor: .bottom)
-                .rotationEffect(.degrees((hungry ? -4 : 0) + sway + (walking ? -3 * sin(phase * 10) : 0)), anchor: .bottom)
+                .rotationEffect(.degrees((hungry ? -4 : 0) + (life.posture == .upright ? 0 : sway) + (walking ? -3 * sin(phase * 10) : 0)), anchor: .bottom)
+                .scaleEffect(life.growScale, anchor: .bottom)
+                .offset(y: life.posture == .sofa ? w * 1.10 * 0.05 : 0)
                 .offset(x: walk * w * 0.15 + drag.width, y: -abs(sin(phase * 8)) * (walking ? w * 0.025 : 0) + drag.height)
             if showScene && level >= 7 {
                 Image(systemName: "sparkle").font(.system(size: w * 0.10, weight: .light))
                     .foregroundStyle(Palette.gold).offset(x: w * 0.52, y: -w * 0.35)
+            }
+            if showScene, let bubble = life.bubble, !(sinceFeed >= 0 && sinceFeed < 1.4 && moving) {
+                Text(bubble)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(0.8)
+                    .foregroundStyle(Palette.ink.opacity(0.8))
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(Color(hex: 0xF5F0E6).opacity(0.9), in: Capsule())
+                    .rotationEffect(.degrees(-3)).offset(x: w * 0.30, y: -w * 0.66)
             }
             if showScene && sinceFeed >= 0 && sinceFeed < 1.4 && moving {
                 Text(fedLane == 3 ? "OUT IN THE WORLD." : fedLane == 1 ? "BODY OF EVIDENCE." : "LOADED. NOW USE IT.")
@@ -3162,14 +3177,14 @@ struct LarpyCharacterView: View {
             ForEach([-1.0, 1.0], id: \.self) { side in
                 Capsule().fill(Palette.creature)
                     .overlay(Capsule().stroke(Palette.ink.opacity(0.65), lineWidth: w * 0.009))
-                    .frame(width: w * 0.14, height: w * 0.29)
+                    .frame(width: w * 0.14 * life.bodyTone, height: w * 0.29)
                     .rotationEffect(.degrees(side * (hungry ? -12 : -28)))
                     .offset(x: side * w * 0.46, y: h * 0.20)
                 Capsule().fill(Palette.creature)
                     .overlay(Capsule().stroke(Palette.ink.opacity(0.65), lineWidth: w * 0.009))
                     .frame(width: w * 0.20, height: w * 0.13)
-                    .rotationEffect(.degrees(side * 12))
-                    .offset(x: side * w * 0.23, y: h * 0.48)
+                    .rotationEffect(.degrees(side * (life.posture == .sofa ? 25 : 12)))
+                    .offset(x: side * w * (life.posture == .upright ? 0.25 : 0.23), y: h * 0.48)
             }
             EggShape().fill(Palette.creature)
                 .overlay(EggShape().stroke(Palette.ink.opacity(0.8), lineWidth: max(0.7, w * 0.009)))
@@ -3302,7 +3317,7 @@ struct LarpyCharacterView: View {
     }
 }
 
-private struct CurveLine: Shape {
+struct CurveLine: Shape {
     var bend: CGFloat
     func path(in r: CGRect) -> Path {
         var p = Path(); p.move(to: CGPoint(x: r.minX, y: r.minY))
@@ -3327,6 +3342,31 @@ private struct EggShape: Shape {
 }
 
 // MARK: - Badge, notifications, once-a-day icon
+
+/// Two rows in Settings. The system review prompt is never called; a person opens these.
+enum Feedback {
+    /// Empty until the app has an App Store ID. The row hides itself until then.
+    static let appStoreID = ""
+    /// Where 'Ask for something' goes. Set this before TestFlight.
+    static let address = "hello@larpy.app"
+
+    static func rate() {
+        guard !appStoreID.isEmpty, let url = URL(string: "https://apps.apple.com/app/id\(appStoreID)?action=write-review") else { return }
+        UIApplication.shared.open(url)
+    }
+
+    @MainActor static func ask(store: ProofStore) {
+        let s = LifeEngine.stats(store.logs)
+        let build = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") + " (" + (Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?") + ")"
+        let firstDay = store.logs.map(\.createdAt).min().map { max(1, (LarpyTime.cal.dateComponents([.day], from: $0, to: .now).day ?? 0) + 1) } ?? 0
+        let work = store.logs.filter { $0.quest == .work && $0.isEligible }.count
+        let body = "\n\n\nv\(build) · iOS \(UIDevice.current.systemVersion) · \(firstDay) days used · \(work) Work · \(s.workN)/7 this week"
+        var c = URLComponents(); c.scheme = "mailto"; c.path = address
+        c.queryItems = [URLQueryItem(name: "subject", value: "Larpy"), URLQueryItem(name: "body", value: body)]
+        if let url = c.url, UIApplication.shared.canOpenURL(url) { UIApplication.shared.open(url) }
+        else { UIPasteboard.general.string = address }
+    }
+}
 
 enum LarpyReminders {
     private static let morningID = "larpy.1700"

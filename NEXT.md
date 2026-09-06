@@ -1,4 +1,17 @@
-# Current — 6 September 2026 (evening)
+# Current — 6 September 2026 (night)
+
+DESIGN.md is built: the Today rewrite, the character wiring, twenty-four rooms, the contact-sheet wardrobe,
+the small paywall (off until App Store Connect has the product), the feedback rows, no onboarding.
+Read **CHANGES.md** for what was verified and what was left.
+
+Before TestFlight: set `Feedback.address`, create the product `com.larpy.app.larp` in App Store Connect,
+rename the look ids to neutral slugs. Then Ayush plus one friend.
+
+Next, unchanged: one-friend sync, a real universal-link domain, App Groups on a signed device.
+
+---
+
+## Earlier on 6 September 2026 (evening)
 
 Larpy stands in a full-width scene panel. The lane you fed last picks the room, the share image
 carries the same room, and one room is locked behind seven completed Work receipts. Nobody real

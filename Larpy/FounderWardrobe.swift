@@ -21,7 +21,7 @@ struct FounderLook: Identifiable {
         .init(id: "hormozi", kit: .tee, colorHex: 0xDDD6C8, detail: "stripe", prop: "board"),
         .init(id: "cursor", kit: .hoodie, colorHex: 0x6C756C, detail: "zip", prop: "laptop"),
         .init(id: "belfort", kit: .collar, colorHex: 0xDDD9CF, detail: "tie", prop: "phone"),
-        .init(id: "zuck", kit: .tee, colorHex: 0x929591, detail: "chain", prop: "laptop"),
+        .init(id: "zuck", kit: .tee, colorHex: 0x6F7F8C, detail: "chain", prop: "laptop"),
         .init(id: "jensen", kit: .hoodie, colorHex: 0x363A35, detail: "zip", prop: "chip"),
         .init(id: "sara", kit: .collar, colorHex: 0xB9816D, detail: "buttons", prop: "notebook"),
         .init(id: "sam", kit: .tee, colorHex: 0x73877D, detail: "pocket", prop: "laptop"),
@@ -35,13 +35,13 @@ struct FounderLook: Identifiable {
         .init(id: "jack", kit: .hoodie, colorHex: 0x444C4B, detail: "zip", prop: "phone"),
         .init(id: "elon", kit: .tee, colorHex: 0x393F3C, detail: "patch", prop: "rocket"),
         .init(id: "jeff", kit: .collar, colorHex: 0xB7A78A, detail: "zip", prop: "parcel"),
-        .init(id: "bill", kit: .rollneck, colorHex: 0x9A9A8C, detail: "round-glasses", prop: "book"),
+        .init(id: "bill", kit: .rollneck, colorHex: 0xB5A27C, detail: "round-glasses", prop: "book"),
         .init(id: "woz", kit: .tee, colorHex: 0x9DADAB, detail: "stripe", prop: "chip"),
         .init(id: "larry", kit: .collar, colorHex: 0xBEC4BA, detail: "pocket", prop: "notebook"),
         .init(id: "sergey", kit: .tee, colorHex: 0x708C87, detail: "v-neck", prop: "chip"),
         .init(id: "reid", kit: .collar, colorHex: 0xA5ABB0, detail: "pocket", prop: "phone"),
         .init(id: "peter", kit: .collar, colorHex: 0x747F84, detail: "tie", prop: "book"),
-        .init(id: "marc", kit: .collar, colorHex: 0x8D9093, detail: "buttons", prop: "notebook"),
+        .init(id: "marc", kit: .collar, colorHex: 0x5E6B72, detail: "buttons", prop: "notebook"),
         .init(id: "ben", kit: .hoodie, colorHex: 0x858574, detail: "zip", prop: "book"),
         .init(id: "tobi", kit: .hoodie, colorHex: 0x6E8678, detail: "patch", prop: "laptop"),
         .init(id: "dylan", kit: .tee, colorHex: 0xAE8C70, detail: "pocket", prop: "notebook"),
@@ -49,7 +49,7 @@ struct FounderLook: Identifiable {
         .init(id: "guillermo", kit: .hoodie, colorHex: 0x484C4A, detail: "patch", prop: "laptop"),
         .init(id: "pieter", kit: .tee, colorHex: 0xB4A084, detail: "v-neck", prop: "laptop"),
         .init(id: "david", kit: .collar, colorHex: 0xB0B2A8, detail: "stripe", prop: "laptop"),
-        .init(id: "jason", kit: .tee, colorHex: 0xA09D90, detail: "pocket", prop: "book"),
+        .init(id: "jason", kit: .tee, colorHex: 0xC2A98E, detail: "pocket", prop: "book"),
         .init(id: "drew", kit: .hoodie, colorHex: 0x8398A7, detail: "zip", prop: "laptop"),
         .init(id: "dustin", kit: .tee, colorHex: 0x8C9C90, detail: "pocket", prop: "notebook"),
         .init(id: "stewart", kit: .collar, colorHex: 0x998B78, detail: "round-glasses", prop: "phone"),
@@ -78,18 +78,33 @@ struct FounderLook: Identifiable {
 
 struct WardrobeView: View {
     @ObservedObject var store: ProofStore
+    @ObservedObject var prefs: Prefs
     @Environment(\.dismiss) private var dismiss
     @State private var selected: FounderLook?
+    @State private var showAsk = false
     private var unlocked: Set<String> { Set(store.logs.compactMap(\.founderID)) }
     private var workDone: Int { store.logs.filter { $0.quest == .work && $0.isEligible }.count }
     private var rewardEarned: Bool { workDone >= MovieScene.rewardAt }
+    private var nextID: String { FounderLook.next(ordinal: store.logs.filter(\.isEligible).count).id }
+    private var paused: Bool { !Larp.wardrobeOpen }
+    private let columns = [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Become someone.\nThen bring receipts.").font(.system(size: 29, weight: .medium, design: .serif)).foregroundStyle(Palette.text)
-                    Text("\(unlocked.count) of \(FounderLook.all.count) looks earned. Every receipt changes the clothes and the scene. Only Work changes the level.")
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text("\(unlocked.count)").font(.system(size: 72, weight: .medium, design: .serif)).tracking(-3).foregroundStyle(Palette.text)
+                        Text("OF \(FounderLook.all.count) LOOKS").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(2).foregroundStyle(Palette.muted)
+                    }
+                    Text(paused ? "\(unlocked.count) of \(FounderLook.all.count) looks earned. Wardrobe paused." : "One look per receipt, in order. Only Work changes the level.")
                         .font(.system(size: 15)).foregroundStyle(Palette.muted)
+
+                    if paused { pausedCard }
+                    else if let line = Larp.untilLine, let days = Larp.daysLeft, days <= 7 {
+                        Text(line).font(.system(size: 11, weight: .medium, design: .monospaced)).tracking(1.4).foregroundStyle(Palette.muted)
+                    }
+
                     // The one room no costume carries. Visible from the first day, locked until seven.
                     VStack(alignment: .leading, spacing: 10) {
                         ZStack {
@@ -120,30 +135,38 @@ struct WardrobeView: View {
                     }
                     .padding(.bottom, 4)
 
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+                    LazyVGrid(columns: columns, spacing: 6) {
                         ForEach(FounderLook.all) { look in
+                            let earned = unlocked.contains(look.id)
+                            let isNext = !paused && look.id == nextID && !earned
                             Button { selected = look } label: {
-                                VStack(spacing: 8) {
-                                    LarpyCharacterView(life: .neutral, base: .cream, kit: look.kit, width: 82, showScene: false, level: 1, founderID: look.id)
-                                        .frame(height: 125)
-                                    Text(look.kit.shortLabel).font(.system(size: 15, weight: .semibold)).lineLimit(1)
-                                    Text(look.scene.title).font(.system(size: 12)).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
-                                    Text(unlocked.contains(look.id) ? "Earned" : "Locked")
-                                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                                        .foregroundStyle(unlocked.contains(look.id) ? Palette.gold : Palette.muted.opacity(0.7))
-                                }.foregroundStyle(Palette.text).frame(maxWidth: .infinity).padding(.vertical, 15)
-                                    .background(Palette.card, in: RoundedRectangle(cornerRadius: 18))
+                                ZStack(alignment: .bottom) {
+                                    Rectangle().fill(look.color.opacity(earned ? 0.9 : 0.35)).frame(height: 4)
+                                    LarpyCharacterView(life: .neutral, base: .cream, kit: look.kit, width: 60, showScene: false, level: earned ? 1 : 0, founderID: look.id)
+                                        .frame(height: 96).offset(y: -4)
+                                        .opacity(earned ? 1 : 0.26)
+                                    if isNext {
+                                        Text("NEXT").font(.system(size: 9, weight: .semibold, design: .monospaced)).tracking(1.2)
+                                            .foregroundStyle(Palette.gold).offset(y: -84)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity).frame(height: 108)
+                                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Palette.gold, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+                                    .opacity(isNext ? 1 : 0))
+                                .contentShape(Rectangle())
                             }.buttonStyle(.plain)
+                                .accessibilityLabel("\(look.title). \(earned ? "Earned" : isNext ? "Next" : "Locked").")
                         }
                     }
                     Text("Original costumes and original scenes, drawn for this app. Nobody real is named or depicted, and no film is reproduced.").font(.system(size: 12)).foregroundStyle(Palette.muted)
                 }.padding(24)
-            }.background(Palette.bg).navigationTitle("Your characters").navigationBarTitleDisplayMode(.inline)
+            }.background(Palette.bg).navigationTitle("Looks").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
         .sheet(item: $selected) { look in
             VStack(spacing: 18) {
-                LarpyCharacterView(life: .neutral, base: .cream, kit: look.kit, width: 190, interactive: true, level: 3, founderID: look.id).frame(height: 280)
+                LarpyCharacterView(life: .neutral, base: .cream, kit: look.kit, width: 150, scene: look.scene, interactive: true, level: 3, founderID: look.id).frame(height: 250)
                 VStack(spacing: 6) {
                     Text(look.kit.shortLabel).font(.system(size: 30, weight: .medium, design: .serif)).foregroundStyle(Palette.text)
                     Text(look.scene.caption).font(.system(size: 11, weight: .medium, design: .monospaced)).tracking(1.6).foregroundStyle(Palette.muted)
@@ -152,6 +175,23 @@ struct WardrobeView: View {
                     .font(.system(size: 16)).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
             }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity).background(Palette.bg).presentationDetents([.large])
         }
+        .sheet(isPresented: $showAsk) { AskView(store: store, prefs: prefs) }
+    }
+
+    /// The free month is over. The next look waits. One tap opens the ask; nothing opens it for you.
+    private var pausedCard: some View {
+        Button { showAsk = true } label: {
+            HStack(spacing: 14) {
+                LarpyCharacterView(life: .neutral, base: .cream, kit: FounderLook.find(nextID)?.kit ?? .bare, width: 44, showScene: false, founderID: nextID)
+                    .frame(width: 56, height: 64).opacity(0.5)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("NEXT LOOK · \(Larp.fallbackPrice.uppercased()) ONCE").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(Palette.gold)
+                    Text("Receipts still count. The costume is waiting.").font(.system(size: 13)).foregroundStyle(Palette.muted)
+                }
+                Spacer(); Image(systemName: "arrow.up.right").foregroundStyle(Palette.muted)
+            }
+            .padding(16).background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }.buttonStyle(.plain)
     }
 }
 
@@ -167,13 +207,11 @@ struct AchievementSection: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Achievements").font(.system(size: 24, weight: .semibold)).foregroundStyle(Palette.text)
             Text("Receipts turn into things worth keeping.").font(.system(size: 15)).foregroundStyle(Palette.muted)
-            VStack(spacing: 0) {
-                milestone("First proof", detail: "One real receipt.", earned: store.logs.contains { $0.isEligible }, symbol: "checkmark.seal")
-                Divider().overlay(Palette.line)
-                milestone("Out in the world", detail: "Your first completed Work receipt.", earned: outputs >= 1, symbol: "arrow.up.right")
-                Divider().overlay(Palette.line)
-                milestone("Repeat offender", detail: "Seven completed Work receipts.", earned: outputs >= 7, symbol: "seal")
-            }.padding(.horizontal, 16).background(Palette.card, in: RoundedRectangle(cornerRadius: 18))
+            HStack(alignment: .top, spacing: 12) {
+                pin("FIRST PROOF", earned: store.logs.contains { $0.isEligible })
+                pin("OUT THERE", earned: outputs >= 1)
+                pin("REPEAT OFFENDER", earned: outputs >= 7)
+            }.frame(maxWidth: .infinity)
             Button { showFollowers = true } label: {
                 HStack(spacing: 14) {
                     Text("in").font(.system(size: 20, weight: .bold)).foregroundStyle(Palette.load)
@@ -188,6 +226,20 @@ struct AchievementSection: View {
                 }.padding(.vertical, 10).contentShape(Rectangle())
             }.buttonStyle(.plain)
         }.sheet(isPresented: $showFollowers) { FollowerEvidenceSheet(evidence: $evidence) }
+    }
+    /// The gold level pin from the character, at 28pt. Solid when earned, a line when not.
+    private func pin(_ title: String, earned: Bool) -> some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle().fill(Palette.gold).opacity(earned ? 1 : 0)
+                Circle().stroke(Palette.gold.opacity(earned ? 0 : 0.6), lineWidth: 1)
+                if earned { Image(systemName: "checkmark").font(.system(size: 12, weight: .bold)).foregroundStyle(Palette.ink) }
+            }.frame(width: 28, height: 28)
+            Text(title).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1)
+                .foregroundStyle(earned ? Palette.text : Palette.muted).multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }.frame(maxWidth: .infinity)
+            .accessibilityLabel("\(title). \(earned ? "Earned" : "Not yet").")
     }
     private func milestone(_ title: String, detail: String, earned: Bool, symbol: String) -> some View {
         HStack(spacing: 14) {
@@ -217,7 +269,7 @@ struct FollowerEvidenceSheet: View {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("Your audience.\nYour receipt.").font(.system(size: 32, weight: .medium, design: .serif)).foregroundStyle(Palette.text)
                     Text("LinkedIn followers").font(.system(size: 16, weight: .semibold)).foregroundStyle(Palette.text)
-                    TextField("1,000", text: $count).font(.system(size: 42, weight: .medium, design: .rounded)).keyboardType(.numberPad).foregroundStyle(Palette.text)
+                    TextField("1,000", text: $count).font(.system(size: 42, weight: .medium, design: .serif)).keyboardType(.numberPad).foregroundStyle(Palette.text)
                     PhotosPicker(selection: $photo, matching: .images) {
                         VStack(spacing: 12) {
                             if let data = imageData, let image = UIImage(data: data) {
@@ -274,6 +326,7 @@ struct FollowerEvidenceSheet: View {
 /// One warm ground, one saturated accent per scene, so the set still reads as one system.
 enum MovieScene: String, CaseIterable, Identifiable {
     case road, neon, diner, rooftop, field, gym, floor, racks, orbit, summit, spotlight, platform, cabin, sea
+    case pool, pitch, stairwell, bridge, lamp, whiteboard, hum, dock, table, launch
     var id: String { rawValue }
 
     /// Sentence case for the wardrobe grid.
@@ -293,6 +346,16 @@ enum MovieScene: String, CaseIterable, Identifiable {
         case .platform:  "Waiting on the train"
         case .cabin:     "Snow on the glass"
         case .sea:       "Out past the shelf"
+        case .pool:      "Pool at six"
+        case .pitch:     "The pitch under lights"
+        case .stairwell: "Stairwell, floor nine"
+        case .bridge:    "Bridge at dawn"
+        case .lamp:      "Lamp on the shelf"
+        case .whiteboard: "Tape on the whiteboard"
+        case .hum:       "Server hum at 2am"
+        case .dock:      "Loading dock"
+        case .table:     "The demo table"
+        case .launch:    "Launch pad, wind up"
         }
     }
 
@@ -315,6 +378,16 @@ enum MovieScene: String, CaseIterable, Identifiable {
         case .platform:  (0x2E3231, 0x40423E)
         case .cabin:     (0xBFCCD4, 0xE2E2DE)
         case .sea:       (0xD9E4E4, 0xF0E6D2)
+        case .pool:      (0xDCEBEA, 0xF1E9D6)
+        case .pitch:     (0x2F3546, 0x4A4B55)
+        case .stairwell: (0xF1E4D2, 0xE6CDB0)
+        case .bridge:    (0xF4DDC3, 0xE9B48F)
+        case .lamp:      (0xEFE6D3, 0xE5D6BC)
+        case .whiteboard: (0xF3EFE6, 0xEAE3D5)
+        case .hum:       (0x1E2426, 0x283033)
+        case .dock:      (0xF5DEBB, 0xE8BF93)
+        case .table:     (0xF4EEE3, 0xEADFCD)
+        case .launch:    (0x2B2F45, 0x4C405A)
         }
     }
     private var land: UInt {
@@ -333,6 +406,16 @@ enum MovieScene: String, CaseIterable, Identifiable {
         case .platform: 0x53544F
         case .cabin: 0xE9E9E6
         case .sea: 0x8FA9AC
+        case .pool: 0xE6DCC6
+        case .pitch: 0x4E8A5C
+        case .stairwell: 0xB9977A
+        case .bridge: 0x8F7A6A
+        case .lamp: 0xA6845E
+        case .whiteboard: 0xC9C1B3
+        case .hum: 0x1A1F21
+        case .dock: 0x9A7B62
+        case .table: 0xC8B49A
+        case .launch: 0x514B4A
         }
     }
     /// The one saturated note per scene.
@@ -352,6 +435,16 @@ enum MovieScene: String, CaseIterable, Identifiable {
         case .platform: 0xE8B33C
         case .cabin: 0xE2954F
         case .sea: 0x3F86B0
+        case .pool: 0x35A8B5
+        case .pitch: 0xF2E6A0
+        case .stairwell: 0xE0603A
+        case .bridge: 0xE76F3C
+        case .lamp: 0x3F8F6B
+        case .whiteboard: 0xE04B4B
+        case .hum: 0x7ED957
+        case .dock: 0xE2582F
+        case .table: 0xC4A35A
+        case .launch: 0xF0A03C
         }
     }
 
@@ -370,8 +463,20 @@ enum MovieScene: String, CaseIterable, Identifiable {
             .frame(width: g.size.width, height: h)
         }
         .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous).fill(Color.black.opacity(Theme.isDark ? 0.30 : 0)))
+        .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous).fill(MovieScene.daypartTint))
+        .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous).fill(Color.black.opacity(Theme.isDark ? 0.22 : 0)))
         .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous).stroke(Palette.ink.opacity(Theme.isDark ? 0.32 : 0.09), lineWidth: 1))
+    }
+
+    /// One tint by time of day over every room. Dawn, dusk, night. Nothing else changes.
+    static var daypartTint: Color {
+        let hour = LarpyTime.cal.component(.hour, from: .now)
+        switch hour {
+        case 5..<8: return Color(hex: 0xF0A46A).opacity(0.16)
+        case 18..<21: return Color(hex: 0xC4593A).opacity(0.20)
+        case 21..<24, 0..<5: return Color(hex: 0x101828).opacity(Theme.isDark ? 0.22 : 0.42)
+        default: return .clear
+        }
     }
 
     /// Ground line as an offset from the panel centre. Everything that stands on the floor uses it.
@@ -401,6 +506,214 @@ enum MovieScene: String, CaseIterable, Identifiable {
         case .platform: platform(d, hz, h, pw)
         case .cabin: cabin(d, hz, h, pw)
         case .sea: sea(d, hz, h, pw)
+        case .pool: pool(d, hz, h, pw)
+        case .pitch: pitch(d, hz, h, pw)
+        case .stairwell: stairwell(d, hz, h, pw)
+        case .bridge: bridge(d, hz, h, pw)
+        case .lamp: lamp(d, hz, h, pw)
+        case .whiteboard: whiteboard(d, hz, h, pw)
+        case .hum: hum(d, hz, h, pw)
+        case .dock: dock(d, hz, h, pw)
+        case .table: table(d, hz, h, pw)
+        case .launch: launch(d, hz, h, pw)
+        }
+    }
+
+    private func pool(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            Circle().fill(Color(hex: 0xF2C97E).opacity(0.55))
+                .frame(width: d * 0.20, height: d * 0.20)
+                .offset(x: -pw * 0.34, y: g - d * 0.60)
+            ground(h, hz)
+            RoundedRectangle(cornerRadius: d * 0.02).fill(Color(hex: accent).opacity(0.55))
+                .frame(width: pw * 0.92, height: h - hz - d * 0.05)
+                .offset(y: hz / 2 + d * 0.025)
+            ForEach(0..<5, id: \.self) { i in
+                Rectangle().fill(Color(hex: 0xF3E3C6).opacity(0.35))
+                    .frame(width: d * 0.006, height: h - hz - d * 0.06)
+                    .offset(x: pw * (CGFloat(i) * 0.19 - 0.38), y: hz / 2 + d * 0.03)
+            }
+        }
+    }
+
+    private func pitch(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<2, id: \.self) { side in
+                Rectangle().fill(Color(hex: land).opacity(0.6))
+                    .frame(width: d * 0.012, height: d * 0.62)
+                    .offset(x: pw * (side == 0 ? -0.40 : 0.40), y: g - d * 0.31)
+                Circle().fill(Color(hex: accent).opacity(0.9))
+                    .frame(width: d * 0.09, height: d * 0.09)
+                    .offset(x: pw * (side == 0 ? -0.40 : 0.40), y: g - d * 0.64)
+                    .blur(radius: d * 0.008)
+            }
+            ground(h, hz)
+            Rectangle().fill(Color(hex: 0xF3E3C6).opacity(0.35))
+                .frame(height: d * 0.010).offset(y: g + d * 0.10)
+        }
+    }
+
+    private func stairwell(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<5, id: \.self) { i in
+                Rectangle().fill(Color(hex: land).opacity(0.75))
+                    .frame(width: pw * 0.16, height: d * 0.05)
+                    .offset(x: pw * (0.44 - CGFloat(i) * 0.05), y: g - d * (0.06 + CGFloat(i) * 0.10))
+            }
+            Rectangle().fill(Color(hex: accent).opacity(0.7))
+                .frame(width: d * 0.012, height: d * 0.55)
+                .offset(x: pw * 0.28, y: g - d * 0.33)
+            RoundedRectangle(cornerRadius: d * 0.01).fill(Color(hex: accent).opacity(0.85))
+                .frame(width: d * 0.16, height: d * 0.06)
+                .offset(x: -pw * 0.36, y: g - d * 0.58)
+            ground(h, hz)
+        }
+    }
+
+    private func bridge(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            Circle().fill(Color(hex: accent).opacity(0.8))
+                .frame(width: d * 0.26, height: d * 0.26)
+                .offset(x: pw * 0.30, y: g - d * 0.52)
+            ForEach(0..<2, id: \.self) { side in
+                Rectangle().fill(Color(hex: land).opacity(0.85))
+                    .frame(width: d * 0.06, height: d * 0.70)
+                    .offset(x: pw * (side == 0 ? -0.36 : 0.36), y: g - d * 0.35)
+            }
+            CurveLine(bend: 0.45).stroke(Color(hex: land).opacity(0.7), lineWidth: max(1, d * 0.008))
+                .frame(width: pw * 0.72, height: d * 0.30)
+                .offset(y: g - d * 0.60)
+            ground(h, hz)
+        }
+    }
+
+    private func lamp(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            Rectangle().fill(Color(hex: land).opacity(0.7))
+                .frame(width: pw * 0.30, height: d * 0.022)
+                .offset(x: -pw * 0.34, y: g - d * 0.44)
+            ForEach(0..<4, id: \.self) { i in
+                RoundedRectangle(cornerRadius: 1).fill(Color(hex: land).opacity(0.5 + Double(i % 2) * 0.25))
+                    .frame(width: d * 0.035, height: d * (0.12 + CGFloat(i % 3) * 0.02))
+                    .offset(x: -pw * (0.44 - CGFloat(i) * 0.05), y: g - d * 0.52)
+            }
+            Triangle().fill(Color(hex: accent).opacity(0.22))
+                .frame(width: pw * 0.34, height: d * 0.42)
+                .offset(x: pw * 0.34, y: g - d * 0.21)
+                .blur(radius: d * 0.02)
+            Capsule().fill(Color(hex: accent).opacity(0.85))
+                .frame(width: d * 0.10, height: d * 0.055)
+                .offset(x: pw * 0.34, y: g - d * 0.46)
+            Rectangle().fill(Color(hex: 0x2A241C).opacity(0.5))
+                .frame(width: d * 0.006, height: d * 0.44)
+                .offset(x: pw * 0.34, y: g - d * 0.22)
+            ground(h, hz)
+        }
+    }
+
+    private func whiteboard(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            RoundedRectangle(cornerRadius: d * 0.015).fill(Color.white.opacity(0.55))
+                .frame(width: pw * 0.80, height: d * 0.46)
+                .offset(y: g - d * 0.40)
+            ForEach(0..<3, id: \.self) { i in
+                Rectangle().fill(Color(hex: accent).opacity(0.75))
+                    .frame(width: d * 0.10, height: d * 0.016)
+                    .rotationEffect(.degrees(Double(i) * 30 - 30))
+                    .offset(x: pw * (CGFloat(i) * 0.30 - 0.30), y: g - d * 0.60)
+            }
+            ground(h, hz)
+        }
+    }
+
+    private func hum(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<2, id: \.self) { side in
+                VStack(spacing: d * 0.018) {
+                    ForEach(0..<8, id: \.self) { i in
+                        HStack(spacing: d * 0.01) {
+                            Circle().fill(Color(hex: accent).opacity(i % 3 == 0 ? 0.9 : 0.3)).frame(width: d * 0.010, height: d * 0.010)
+                            RoundedRectangle(cornerRadius: 1).fill(Color(hex: 0x3B4548)).frame(width: d * 0.09, height: d * 0.012)
+                        }
+                    }
+                }
+                .padding(d * 0.02)
+                .background(RoundedRectangle(cornerRadius: d * 0.015).fill(Color(hex: land)))
+                .offset(x: pw * (side == 0 ? -0.36 : 0.36), y: g - d * 0.26)
+            }
+            ground(h, hz)
+        }
+    }
+
+    private func dock(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            RoundedRectangle(cornerRadius: d * 0.01).fill(Color(hex: land).opacity(0.30))
+                .frame(width: pw * 0.34, height: d * 0.50)
+                .overlay(
+                    VStack(spacing: d * 0.035) { ForEach(0..<5, id: \.self) { _ in Rectangle().fill(Color(hex: land).opacity(0.35)).frame(height: d * 0.008) } }
+                )
+                .offset(x: -pw * 0.34, y: g - d * 0.25)
+            ForEach(0..<2, id: \.self) { i in
+                RoundedRectangle(cornerRadius: d * 0.01).fill(Color(hex: accent).opacity(0.7 - Double(i) * 0.2))
+                    .frame(width: d * 0.18, height: d * 0.14)
+                    .offset(x: pw * (0.30 + CGFloat(i) * 0.12), y: g - d * (0.07 + CGFloat(i) * 0.14))
+            }
+            ground(h, hz)
+        }
+    }
+
+    private func table(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ground(h, hz)
+            RoundedRectangle(cornerRadius: d * 0.01).fill(Color(hex: land))
+                .frame(width: pw * 0.30, height: d * 0.03)
+                .offset(x: pw * 0.34, y: g - d * 0.20)
+            Rectangle().fill(Color(hex: land).opacity(0.8))
+                .frame(width: d * 0.02, height: d * 0.20)
+                .offset(x: pw * 0.34, y: g - d * 0.10)
+            RoundedRectangle(cornerRadius: d * 0.015).fill(Color(hex: accent).opacity(0.9))
+                .frame(width: d * 0.14, height: d * 0.09)
+                .offset(x: pw * 0.34, y: g - d * 0.27)
+            Circle().fill(Color(hex: accent).opacity(0.25))
+                .frame(width: d * 0.30, height: d * 0.30)
+                .offset(x: -pw * 0.34, y: g - d * 0.46)
+                .blur(radius: d * 0.03)
+        }
+    }
+
+    private func launch(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        let g = gy(hz, h)
+        return ZStack {
+            ForEach(0..<10, id: \.self) { i in
+                Circle().fill(Color.white.opacity(0.5))
+                    .frame(width: d * 0.012, height: d * 0.012)
+                    .offset(x: pw * (CGFloat(i) * 0.10 - 0.45), y: g - d * (0.40 + CGFloat((i * 7) % 4) * 0.12))
+            }
+            Rectangle().fill(Color(hex: land).opacity(0.9))
+                .frame(width: d * 0.05, height: d * 0.72)
+                .offset(x: pw * 0.36, y: g - d * 0.36)
+            ForEach(0..<6, id: \.self) { i in
+                Rectangle().fill(Color(hex: land).opacity(0.7))
+                    .frame(width: d * 0.12, height: d * 0.008)
+                    .offset(x: pw * 0.36, y: g - d * (0.10 + CGFloat(i) * 0.12))
+            }
+            Capsule().fill(Color(hex: accent).opacity(0.85))
+                .frame(width: d * 0.06, height: d * 0.16)
+                .offset(x: pw * 0.29, y: g - d * 0.26)
+            Ellipse().fill(Color(hex: accent).opacity(0.25))
+                .frame(width: pw * 0.40, height: d * 0.12)
+                .offset(x: pw * 0.30, y: g + d * 0.02)
+                .blur(radius: d * 0.03)
+            ground(h, hz)
         }
     }
 
@@ -676,11 +989,15 @@ enum MovieScene: String, CaseIterable, Identifiable {
     static let rewardAt = 7
 
     /// The room Today and the share image are both showing. One place, so they never disagree.
-    static func forToday(_ todayLogs: [ProofLog], workThisWeek: Int, fallbackKit: Kit) -> MovieScene {
+    /// The seed is how many completed receipts that lane has this week, so the rooms rotate with use.
+    static func forToday(_ todayLogs: [ProofLog], allLogs: [ProofLog], workThisWeek: Int, fallbackKit: Kit, paused: Bool = false) -> MovieScene {
         guard let latest = todayLogs.first else { return forKit(fallbackKit) }
+        if paused { return forKit(Kit(rawValue: latest.costumeID ?? "") ?? fallbackKit) }
         if workThisWeek >= rewardAt && latest.quest == .work { return reward }
-        let seed = FounderLook.all.firstIndex { $0.id == latest.founderID } ?? todayLogs.count
-        return forLane(latest.quest, seed: seed)
+        let cal = LarpyTime.cal
+        let monday = cal.dateInterval(of: .weekOfYear, for: cal.startOfDay(for: latest.createdAt))?.start ?? latest.createdAt
+        let laneCount = allLogs.filter { $0.quest == latest.quest && $0.isEligible && $0.createdAt >= monday && $0.createdAt <= latest.createdAt }.count
+        return forLane(latest.quest, seed: max(0, laneCount - 1))
     }
 
     /// What you did last decides the room. Body earns the outdoors and the gym, Learnt the rooms
@@ -689,9 +1006,9 @@ enum MovieScene: String, CaseIterable, Identifiable {
     static func forLane(_ lane: QuestKind, seed: Int) -> MovieScene {
         let set: [MovieScene]
         switch lane {
-        case .body:  set = [.gym, .summit, .road, .field]
-        case .learn: set = [.racks, .platform, .diner, .cabin]
-        case .work:  set = [.spotlight, .rooftop, .floor, .neon, .sea]
+        case .body:  set = [.summit, .road, .field, .gym, .pool, .bridge, .stairwell, .pitch]
+        case .learn: set = [.cabin, .racks, .platform, .diner, .lamp, .whiteboard, .hum]
+        case .work:  set = [.rooftop, .sea, .spotlight, .floor, .neon, .dock, .table, .launch]
         }
         return set[abs(seed) % set.count]
     }

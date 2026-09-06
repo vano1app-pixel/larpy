@@ -1,5 +1,61 @@
 # Larpy — what changed
 
+## The design direction, built — 6 September 2026
+
+Everything in DESIGN.md's "Do first" list plus the buildable parts of each section. No onboarding. The first receipt is the setup.
+
+### Today
+- Header is one mono line, `SUN 6 SEP · NOTHING IN`, with the moon, share and gear on the right. Share appears only once something is in. The tokens block and the slogan are gone; tokens live in the Learnt row's subtitle.
+- The headline is the voice line, 26pt serif, left. The first three receipts get their own lines keyed to the count. Then, in order: yesterday's receipt expiring, tomorrow's one thing after 18:00 with no Work, Monday's line, week two said once, then the bank.
+- Seven-segment week strip: gold where Work landed, dashed where the day has not come. `N out this week`, `NEXT AT n` or `EARNED`, the level title, and `LAST WORK · TUE · HOST`.
+- Level zero is `larping`. Day zero hides the strip and the Body and Learnt rows, shows `BARE. ZERO RECEIPTS.`, `Show me the thing.`, `LARPING · FIRST PROOF AT 1`, and one muted line that opens the other rows.
+- Return door after three empty days: `N DAYS. 0 RECEIPTS.`, `Sofa era. One thing and it ends.`, the Work row full, Body and Learnt collapsed to one 40pt row.
+- Tomorrow's one thing: one inline serif field with a hand-drawn gold underline, offered at 3/3 or after 20:00. Next day it sits under the caption with a gold dot, strikes through after any receipt, opens Work with the text as the note, clears at midnight.
+- Rows state the gate: `Photo, or a 60-second timer.` · `Token count, or a link and what it's for.` · `A live link or a screenshot.`
+- After the first receipt: an inline gold pill, `Screenshot this. Send it to one person.`, until the share sheet opens once. The widget offer is an inline card with `Later`. No popups after a receipt; the invite and icon sheets no longer fire.
+
+### Work sheet
+- A sentence in the link field shows, 700 ms after the last keystroke, `A sentence isn't a receipt. Paste the link or attach a screenshot.` on a gold-wash capsule, and the small egg in the header slumps until the text validates.
+- A copied link shows a gold `Use copied link` chip. Reading the clipboard happens only on that tap.
+- The same site as an earlier Work receipt changes the button to `Already counted. New link?`. Still allowed.
+
+### Character
+- The four life-engine fields that were computed and never drawn now draw: upright posture stops the sway and widens the feet, sofa posture drops the egg and turns the feet out, body tone thickens the arms, grow scale scales from the feet, and the bubble draws as a small capsule.
+- Four near-identical greys re-keyed so no two adjacent looks share a kit and a colour.
+
+### Scenes
+- Ten new rooms: pool at six, the pitch under lights, stairwell floor nine, bridge at dawn, lamp on the shelf, tape on the whiteboard, server hum at 2am, loading dock, the demo table, launch pad. Twenty-four rooms total, one reward.
+- The room is seeded by how many completed receipts that lane has this week, light rooms first. Each receipt stores its `sceneID` at write; old receipts fall back to the lane's first room. Day detail shows the room under the date.
+- One daypart tint over every room: dawn, dusk, night.
+
+### Week, People, wardrobe
+- `Ask an agent` is gone from Week. One sentence from counts replaces it. The agent key stays in Settings with a disclosure line.
+- The characters card is gone; a gold `Looks` link sits beside `Share today`. Achievements are three gold pins in one row.
+- Day detail lost its card backgrounds: a 3pt lane rule, the receipt, the note, the time.
+- The wardrobe is a three-column contact sheet: character on a ground strip in its look colour, no labels, locked looks faint, the next look ringed in dashed gold with `NEXT`. Header `12 OF 54 LOOKS`.
+
+### Payment, built small and switched off by the store
+- One non-consumable, `com.larpy.app.larp`, fallback price €2.99 once. Thirty days free from the first eligible receipt. After that the wardrobe pauses: the next look holds, rooms fall back to the kit's room, orbit stays locked, extra icons hide. Logging, history, the week, the widget, the share card and the friend never change.
+- The ask is a half-sheet: the character, `N days. N receipts.`, the level line, the person's own receipt strip, one gold button `Keep the wardrobe · price once`, `Not now. Receipts still count.`, `Restore purchase`. Reached from the paused wardrobe card and Settings only. Never automatic.
+- Until a product exists in App Store Connect the button is disabled and reads `Not on sale yet. Nothing is paused until it is.` The purchase path was not exercised.
+
+### Feedback
+- Two Settings rows, hidden until the first completed Work: `Rate Larpy` (hidden until an App Store ID is set in `Feedback.appStoreID`) and `Ask for something`, which opens Mail to `Feedback.address` with the build, iOS version, days used, Work count and this week prefilled. `Feedback.address` is a placeholder and must be set before TestFlight.
+- `Receipts live on this phone. Deleting the app deletes them.` under the rows.
+
+### Removed
+- OnboardingView, the `hasOnboarded` flag, the base colour picker and peach/mist/butter, the Next screens, WidgetCardView, IconOfferView, IconChoices, receiptLanded, every `.rounded` font.
+
+### Checked
+- Simulator build of app, widget and share extension: succeeded. 30 receipt-gate checks: pass.
+- Running app: Today (light and dark, with the tail card), Week, Looks, Settings, the ask sheet, the rendered share card. Screenshots via the debug launch flags `-openWeek`, `-openWardrobe`, `-openSettings`, `-openAsk`, `-openShare`.
+- Not checked: any purchase, the Body timer and camera paths, notifications, and anything on a signed device.
+
+### Not built from DESIGN.md
+- Friday Tape, Send to witness, the Week frame row, the 9:16 story card, the widget doors and Live Activity: second tier, all wait for a second phone or a signed device.
+- The four new expressions and brows: held for a week of real use, per the plan.
+- Notifications going quiet after three unanswered pings.
+
 ## Full-width scenes, lane-driven rooms, and a room you have to earn — 6 September 2026
 
 - The stage is no longer a circle. Larpy stands in a **full-width rounded panel** that fills the

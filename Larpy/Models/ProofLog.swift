@@ -39,9 +39,9 @@ enum QuestKind: String, CaseIterable, Codable, Identifiable {
     /// Empty-row subtitle on Today.
     var emptyHint: String {
         switch self {
-        case .body: "gym · run · walk"
-        case .learn: "tokens · a lesson · a video"
-        case .work: "live link · screenshot · sent email"
+        case .body: "Photo, or a 60-second timer."
+        case .learn: "Token count, or a link and what it's for."
+        case .work: "A live link or a screenshot."
         }
     }
 
@@ -75,6 +75,8 @@ struct ProofLog: Identifiable, Codable, Equatable {
     var costumeID: String?
     var annotation: String?
     var timerSeconds: Int?
+    /// The room Larpy stood in when this landed. Old receipts have none and fall back to the lane's first room.
+    var sceneID: String?
     var createdAt: Date
 
     init(
@@ -87,6 +89,7 @@ struct ProofLog: Identifiable, Codable, Equatable {
         costumeID: String? = nil,
         annotation: String? = nil,
         timerSeconds: Int? = nil,
+        sceneID: String? = nil,
         createdAt: Date = .now
     ) {
         self.id = id
@@ -98,6 +101,7 @@ struct ProofLog: Identifiable, Codable, Equatable {
         self.costumeID = costumeID
         self.annotation = annotation
         self.timerSeconds = timerSeconds
+        self.sceneID = sceneID
         self.createdAt = createdAt
     }
 }
