@@ -15,10 +15,23 @@ struct FounderLook: Identifiable {
     var scene: MovieScene { MovieScene.forLook(id) }
     var title: String { "\(kit.shortLabel) · \(scene.title)" }
     var label: String { scene.caption }
+    var styleName: String {
+        if let milestone = ProgressRules.skins.first(where: { $0.id == id }) { return milestone.title }
+        if let title = SeasonalShop.titles[id] { return title }
+        switch id {
+        case "look-01": return "The keynote"
+        case "look-02": return "Gym founder"
+        case "look-03": return "Garage coder"
+        case "look-04": return "Deal maker"
+        case "look-05": return "Off-duty tee"
+        case "look-06": return "Leather & chips"
+        default: return "\(kit.shortLabel) \(id.suffix(2))"
+        }
+    }
 
     static let all: [FounderLook] = [
         .init(id: "look-01", kit: .rollneck, colorHex: 0x282522, detail: "round-glasses", prop: "walk"),
-        .init(id: "look-02", kit: .tee, colorHex: 0xDDD6C8, detail: "stripe", prop: "board"),
+        .init(id: "look-02", kit: .tee, colorHex: 0x4C7167, detail: "athletic", prop: "dumbbell"),
         .init(id: "look-03", kit: .hoodie, colorHex: 0x6C756C, detail: "zip", prop: "laptop"),
         .init(id: "look-04", kit: .collar, colorHex: 0xDDD9CF, detail: "tie", prop: "phone"),
         .init(id: "look-05", kit: .tee, colorHex: 0x6F7F8C, detail: "chain", prop: "laptop"),
@@ -32,14 +45,14 @@ struct FounderLook: Identifiable {
         .init(id: "look-13", kit: .collar, colorHex: 0xC5BB9E, detail: "round-glasses", prop: "notebook"),
         .init(id: "look-14", kit: .collar, colorHex: 0x7E9295, detail: "buttons", prop: "notebook"),
         .init(id: "look-15", kit: .tee, colorHex: 0x8A9290, detail: "v-neck", prop: "book"),
-        .init(id: "look-16", kit: .hoodie, colorHex: 0x444C4B, detail: "zip", prop: "phone"),
+        .init(id: "look-16", kit: .hoodie, colorHex: 0x303B40, detail: "broadcast", prop: "microphone"),
         .init(id: "look-17", kit: .tee, colorHex: 0x393F3C, detail: "patch", prop: "rocket"),
         .init(id: "look-18", kit: .collar, colorHex: 0xB7A78A, detail: "zip", prop: "parcel"),
         .init(id: "look-19", kit: .rollneck, colorHex: 0xB5A27C, detail: "round-glasses", prop: "book"),
         .init(id: "look-20", kit: .tee, colorHex: 0x9DADAB, detail: "stripe", prop: "chip"),
         .init(id: "look-21", kit: .collar, colorHex: 0xBEC4BA, detail: "pocket", prop: "notebook"),
         .init(id: "look-22", kit: .tee, colorHex: 0x708C87, detail: "v-neck", prop: "chip"),
-        .init(id: "look-23", kit: .collar, colorHex: 0xA5ABB0, detail: "pocket", prop: "phone"),
+        .init(id: "look-23", kit: .collar, colorHex: 0x3D5872, detail: "blazer", prop: "notebook"),
         .init(id: "look-24", kit: .collar, colorHex: 0x747F84, detail: "tie", prop: "book"),
         .init(id: "look-25", kit: .collar, colorHex: 0x5E6B72, detail: "buttons", prop: "notebook"),
         .init(id: "look-26", kit: .hoodie, colorHex: 0x858574, detail: "zip", prop: "book"),
@@ -68,9 +81,15 @@ struct FounderLook: Identifiable {
         .init(id: "look-49", kit: .collar, colorHex: 0xB3B6AD, detail: "round-glasses", prop: "gear"),
         .init(id: "look-50", kit: .collar, colorHex: 0xA78C80, detail: "buttons", prop: "notebook"),
         .init(id: "look-51", kit: .tee, colorHex: 0x778E79, detail: "patch", prop: "headphones"),
-        .init(id: "look-52", kit: .collar, colorHex: 0xAAB1A6, detail: "pocket", prop: "camera"),
+        .init(id: "look-52", kit: .collar, colorHex: 0xAD745B, detail: "photographer", prop: "camera"),
         .init(id: "look-53", kit: .tee, colorHex: 0xB9AD83, detail: "v-neck", prop: "camera"),
-        .init(id: "look-54", kit: .hoodie, colorHex: 0xA58C7A, detail: "zip", prop: "camera")
+        .init(id: "look-54", kit: .hoodie, colorHex: 0xA58C7A, detail: "zip", prop: "camera"),
+        .init(id: "look-55", kit: .tee, colorHex: 0x356C58, detail: "champion", prop: "dumbbell"),
+        .init(id: "look-56", kit: .rollneck, colorHex: 0x344D60, detail: "captain", prop: "walk"),
+        .init(id: "look-57", kit: .hoodie, colorHex: 0x667345, detail: "scholar", prop: "notebook"),
+        .init(id: "season-pumpkin", kit: .hoodie, colorHex: 0xC56B38, detail: "pumpkin", prop: "walk"),
+        .init(id: "season-vampire", kit: .collar, colorHex: 0x302D33, detail: "vampire", prop: "walk"),
+        .init(id: "season-wizard", kit: .rollneck, colorHex: 0x344D60, detail: "wizard", prop: "book")
     ]
     /// Looks were once keyed by a person's name. Those keys never ship again; stored receipts still resolve.
     static let legacy: [String: String] = [
@@ -134,122 +153,358 @@ struct FounderLook: Identifiable {
     static func next(ordinal: Int) -> FounderLook { all[max(0, ordinal) % all.count] }
 }
 
+/// One appearance resolver for Today, customization, new receipts and sharing.
+enum CharacterStyle {
+    static func unlockedLooks(_ logs: [ProofLog]) -> Set<String> {
+        RewardLedger.unlocked(logs).union(SeasonalShop.cachedLooks)
+    }
+
+    static func lookID(logs: [ProofLog], selected: String) -> String? {
+        if unlockedLooks(logs).contains(selected), FounderLook.find(selected) != nil { return selected }
+        let earned = unlockedLooks(logs)
+        return logs.compactMap { FounderLook.canonicalID($0.founderID) }.first(where: { earned.contains($0) }) ?? "look-03"
+    }
+
+    static func sceneAllowed(_ scene: MovieScene, logs: [ProofLog]) -> Bool {
+        scene != .orbit || logs.filter { $0.quest == .work && $0.isEligible }.count >= MovieScene.rewardAt
+    }
+
+    static func scene(logs: [ProofLog], selected: String, kit: Kit) -> MovieScene {
+        if Larp.wardrobeOpen, let scene = MovieScene(rawValue: selected), sceneAllowed(scene, logs: logs) { return scene }
+        let today = logs.filter { LarpyTime.cal.isDateInToday($0.createdAt) }
+        if today.isEmpty { return .garage }
+        return MovieScene.forToday(today, allLogs: logs, workThisWeek: LifeEngine.stats(logs).workN,
+                                   fallbackKit: kit, paused: !Larp.wardrobeOpen)
+    }
+}
+
 struct WardrobeView: View {
     @ObservedObject var store: ProofStore
     @ObservedObject var prefs: Prefs
     @Environment(\.dismiss) private var dismiss
-    @State private var selected: FounderLook?
-    @State private var showAsk = false
-    private var unlocked: Set<String> { Set(store.logs.compactMap(\.founderID)) }
-    private var workDone: Int { store.logs.filter { $0.quest == .work && $0.isEligible }.count }
-    private var rewardEarned: Bool { workDone >= MovieScene.rewardAt }
-    private var nextID: String { FounderLook.next(ordinal: store.logs.filter(\.isEligible).count).id }
-    private var paused: Bool { !Larp.wardrobeOpen }
-    private let columns = [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var section = 0
+    @State private var previewLook: FounderLook?
+    @State private var showSeasonal = false
+    @ObservedObject private var seasonalShop = SeasonalShop.shared
+    var embedded = false
+    @State private var showAudience = false
+    @State private var audienceAfterPreview = false
+    @State private var filter = 0
+    @State private var outfitTick = 0
+    @State private var iconBusy = false
+    @State private var iconError: String?
+    @State private var currentIcon = UIApplication.shared.alternateIconName ?? ""
+    @State private var previewScene: MovieScene?
+    @AppStorage("pinnedSkinID") private var pinnedSkinID = ""
+    @AppStorage(RewardLedger.audienceKey) private var audienceData = Data()
+    private var unlocked: Set<String> { _ = audienceData; return CharacterStyle.unlockedLooks(store.logs) }
+    private var lookID: String? { CharacterStyle.lookID(logs: store.logs, selected: prefs.selectedLookID) }
+    private var look: FounderLook? { FounderLook.find(lookID) }
+    private var scene: MovieScene { CharacterStyle.scene(logs: store.logs, selected: prefs.selectedSceneID, kit: look?.kit ?? prefs.kit) }
+    private var columns: [GridItem] {
+        dynamicTypeSize >= .xxxLarge ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 148, maximum: 220), spacing: 12)]
+    }
+    private var sceneColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 12), count: dynamicTypeSize.isAccessibilitySize ? 1 : 2)
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text("\(unlocked.count)").font(.system(size: 72, weight: .medium, design: .serif)).tracking(-3).foregroundStyle(Palette.text)
-                        Text("OF \(FounderLook.all.count) LOOKS").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(2).foregroundStyle(Palette.muted)
-                    }
-                    Text(paused ? "\(unlocked.count) of \(FounderLook.all.count) looks earned. Wardrobe paused." : "One look per receipt, in order. Only Work changes the level.")
-                        .font(.system(size: 15)).foregroundStyle(Palette.muted)
-
-                    if paused { pausedCard }
-                    else if let line = Larp.untilLine, let days = Larp.daysLeft, days <= 7 {
-                        Text(line).font(.system(size: 11, weight: .medium, design: .monospaced)).tracking(1.4).foregroundStyle(Palette.muted)
-                    }
-
-                    // The one room no costume carries. Visible from the first day, locked until seven.
-                    VStack(alignment: .leading, spacing: 10) {
-                        ZStack {
-                            // No actor stands here, so the scale is set for the empty room.
-                            MovieScene.reward.panel(w: 78, corner: 20)
-                                .frame(height: 152)
-                                .saturation(rewardEarned ? 1 : 0.15)
-                                .opacity(rewardEarned ? 1 : 0.5)
-                            if !rewardEarned {
-                                VStack(spacing: 7) {
-                                    Image(systemName: "lock.fill").font(.system(size: 17, weight: .semibold))
-                                    Text("\(workDone) / \(MovieScene.rewardAt) completed Work")
-                                        .font(.system(size: 12, weight: .semibold, design: .monospaced)).tracking(0.6)
-                                }.foregroundStyle(Palette.text.opacity(0.85))
-                            }
+                    HStack(spacing: 16) {
+                        LarpyCharacterView(life: .neutral, base: .cream, kit: look?.kit ?? prefs.kit,
+                                           width: 106, showScene: false, interactive: true, fedTick: outfitTick,
+                                           level: LifeEngine.stats(store.logs).workN, founderID: lookID, companion: true)
+                            .frame(width: 116, height: 166)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(look?.styleName ?? "Classic Larpy").font(.title3.weight(.semibold)).foregroundStyle(Palette.text)
+                            Label("Currently wearing", systemImage: "checkmark.circle.fill").font(.subheadline).foregroundStyle(Palette.muted)
                         }
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(MovieScene.reward.title).font(.system(size: 17, weight: .semibold)).foregroundStyle(Palette.text)
-                            Spacer()
-                            Text(rewardEarned ? "EARNED" : "LOCKED")
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1)
-                                .foregroundStyle(rewardEarned ? Palette.gold : Palette.muted)
-                        }
-                        Text(rewardEarned
-                             ? "Yours. Log Work again and Larpy stands in it."
-                             : "No costume comes with this room. Seven completed Work receipts is the only way in.")
-                            .font(.system(size: 13)).foregroundStyle(Palette.muted)
+                        Spacer(minLength: 0)
                     }
-                    .padding(.bottom, 4)
-
-                    LazyVGrid(columns: columns, spacing: 6) {
-                        ForEach(FounderLook.all) { look in
-                            let earned = unlocked.contains(look.id)
-                            let isNext = !paused && look.id == nextID && !earned
-                            Button { selected = look } label: {
-                                ZStack(alignment: .bottom) {
-                                    Rectangle().fill(look.color.opacity(earned ? 0.9 : 0.35)).frame(height: 4)
-                                    LarpyCharacterView(life: .neutral, base: .cream, kit: look.kit, width: 60, showScene: false, level: earned ? 1 : 0, founderID: look.id)
-                                        .frame(height: 96).offset(y: -4)
-                                        .opacity(earned ? 1 : 0.26)
-                                    if isNext {
-                                        Text("NEXT").font(.system(size: 9, weight: .semibold, design: .monospaced)).tracking(1.2)
-                                            .foregroundStyle(Palette.gold).offset(y: -84)
-                                    }
+                    Picker("Customize", selection: $section) {
+                        Text("Outfits").tag(0)
+                        Text("Scenes").tag(1)
+                        Text("App icon").tag(2)
+                    }.pickerStyle(.segmented)
+                    if section == 0 {
+                        nextUnlock
+                        outfits
+                        if seasonalShop.product != nil || seasonalShop.owned {
+                        Divider().padding(.top, 8)
+                        Button { showSeasonal = true } label: {
+                            HStack {
+                                Image(systemName: "moon.stars").font(.title3)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("After-dark collection").font(.subheadline.weight(.medium))
+                                    Text("3 optional paid outfits").font(.caption).foregroundStyle(Palette.muted)
                                 }
-                                .frame(maxWidth: .infinity).frame(height: 108)
-                                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(Palette.gold, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
-                                    .opacity(isNext ? 1 : 0))
-                                .contentShape(Rectangle())
-                            }.buttonStyle(.plain)
-                                .accessibilityLabel("\(look.title). \(earned ? "Earned" : isNext ? "Next" : "Locked").")
+                                Spacer(); Image(systemName: "chevron.right")
+                            }.foregroundStyle(Palette.text).frame(minHeight: 54)
+                        }.buttonStyle(.plain)
                         }
-                    }
-                    Text("Original costumes and original scenes, drawn for this app. Nobody real is named or depicted, and no film is reproduced.").font(.system(size: 12)).foregroundStyle(Palette.muted)
-                }.padding(24)
-            }.background(Palette.bg).navigationTitle("Looks").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+                    } else if section == 1 { scenes }
+                    else { appIcons }
+                }.padding(22).frame(maxWidth: 760).frame(maxWidth: .infinity)
+            }.background(Palette.bg)
+                .navigationTitle("My Larpy").navigationBarTitleDisplayMode(.inline)
+                .toolbar { if !embedded { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } } }
         }
-        .sheet(item: $selected) { look in
-            VStack(spacing: 18) {
-                LarpyCharacterView(life: .neutral, base: .cream, kit: look.kit, width: 150, scene: look.scene, interactive: true, level: 3, founderID: look.id).frame(height: 250)
-                VStack(spacing: 6) {
-                    Text(look.kit.shortLabel).font(.system(size: 30, weight: .medium, design: .serif)).foregroundStyle(Palette.text)
-                    Text(look.scene.caption).font(.system(size: 11, weight: .medium, design: .monospaced)).tracking(1.6).foregroundStyle(Palette.muted)
+        .onChange(of: prefs.selectedLookID) { _, _ in outfitTick += 1 }
+        .onAppear { currentIcon = UIApplication.shared.alternateIconName ?? "" }
+        .alert("Icon didn't change", isPresented: Binding(get: { iconError != nil }, set: { if !$0 { iconError = nil } })) {
+            Button("OK") { iconError = nil }
+        } message: { Text(iconError ?? "Please try again.") }
+        .sheet(item: $previewLook, onDismiss: {
+            if audienceAfterPreview { audienceAfterPreview = false; showAudience = true }
+        }) { item in
+            NavigationStack {
+            ScrollView {
+            VStack(spacing: 20) {
+                LarpyCharacterView(life: .clearedPreview, base: .cream, kit: item.kit, width: 200,
+                                   showScene: false, level: 1, founderID: item.id, companion: true).frame(height: 290)
+                Text(item.styleName).font(.system(.largeTitle, design: .serif)).foregroundStyle(Palette.text)
+                Text(requirement(for: item))
+                    .font(.body).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                if let milestone = ProgressRules.skins.first(where: { $0.id == item.id }) {
+                    let count = milestone.progress(logs: store.logs, audience: RewardLedger.audience, calendar: LarpyTime.cal)
+                    ProgressView(value: Double(min(count, milestone.target)), total: Double(max(1, milestone.target))).tint(Palette.gold)
+                    Text(remaining(for: milestone) + (milestone.platform == nil ? ". They don’t need to be in a row." : ". Follower counts are self-reported with a screenshot."))
+                        .font(.subheadline).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                    Button {
+                        pinnedSkinID = item.id
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        previewLook = nil
+                    } label: {
+                        Label(pinnedSkinID == item.id ? "Keep this as my goal" : "Make this my next outfit", systemImage: "flag")
+                            .font(.headline).foregroundStyle(Palette.ink).padding(.horizontal, 12).padding(.vertical, 14)
+                            .frame(maxWidth: .infinity, minHeight: 54).background(Palette.gold, in: Capsule())
+                    }.buttonStyle(.plain)
                 }
-                Text(unlocked.contains(look.id) ? "You earned this look with a receipt." : "Keep logging. The next look comes with the next receipt.")
-                    .font(.system(size: 16)).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-            }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity).background(Palette.bg).presentationDetents([.large])
+                if let milestone = ProgressRules.skins.first(where: { $0.id == item.id }), milestone.platform != nil {
+                    Button("Track my followers") { audienceAfterPreview = true; previewLook = nil }.frame(minHeight: 44)
+                }
+                Text("Earned through progress. Yours to keep.").font(.footnote).foregroundStyle(Palette.muted)
+            }.padding(24).frame(maxWidth: 480).frame(maxWidth: .infinity)
+            }.background(Palette.bg)
+                .navigationTitle("Your next look").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { previewLook = nil } } }
+            }.presentationDetents([.large])
         }
-        .sheet(isPresented: $showAsk) { AskView(store: store, prefs: prefs) }
+        .sheet(isPresented: $showSeasonal) { SeasonalCollectionView(prefs: prefs) }
+        .sheet(isPresented: $showAudience) { AudienceView(store: store) }
+        .sheet(item: $previewScene) { item in
+            NavigationStack {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        LarpyCharacterView(life: .neutral, base: .cream, kit: look?.kit ?? prefs.kit,
+                                           width: 180, showScene: true, scene: item, founderID: lookID, companion: true).frame(height: 280)
+                        Text(item.title).font(.system(.title, design: .serif))
+                        Text("Save \(max(0, MovieScene.rewardAt - workReceipts)) more Work receipts to unlock this scene for your share cards.")
+                            .font(.body).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                    }.padding(24).frame(maxWidth: .infinity)
+                }.background(Palette.bg).foregroundStyle(Palette.text).navigationTitle("Scene preview").navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { previewScene = nil } } }
+            }
+        }
     }
 
-    /// The free month is over. The next look waits. One tap opens the ask; nothing opens it for you.
-    private var pausedCard: some View {
-        Button { showAsk = true } label: {
-            HStack(spacing: 14) {
-                LarpyCharacterView(life: .neutral, base: .cream, kit: FounderLook.find(nextID)?.kit ?? .bare, width: 44, showScene: false, founderID: nextID)
-                    .frame(width: 56, height: 64).opacity(0.5)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("NEXT LOOK · \(Larp.fallbackPrice.uppercased()) ONCE").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(Palette.gold)
-                    Text("Receipts still count. The costume is waiting.").font(.system(size: 13)).foregroundStyle(Palette.muted)
-                }
-                Spacer(); Image(systemName: "arrow.up.right").foregroundStyle(Palette.muted)
+    private var nextMilestone: SkinMilestone? {
+        if let pinned = ProgressRules.skins.first(where: { $0.id == pinnedSkinID && !unlocked.contains($0.id) }) { return pinned }
+        return ProgressRules.skins.filter { $0.lane != nil && !unlocked.contains($0.id) }.min {
+            let left = $0.target - $0.progress(logs: store.logs, audience: [], calendar: LarpyTime.cal)
+            let right = $1.target - $1.progress(logs: store.logs, audience: [], calendar: LarpyTime.cal)
+            return left < right
+        }
+    }
+
+    private var nextUnlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let next = nextMilestone, let outfit = FounderLook.find(next.id) {
+                Button { previewLook = outfit } label: {
+                    VStack(alignment: .leading, spacing: 9) {
+                        HStack {
+                            Label("Next unlock", systemImage: "flag").font(.caption.weight(.semibold)).foregroundStyle(Palette.muted)
+                            Spacer(); Image(systemName: "chevron.right").font(.caption)
+                        }
+                        Text(outfit.styleName).font(.system(.title2, design: .serif))
+                        let count = next.progress(logs: store.logs, audience: RewardLedger.audience, calendar: LarpyTime.cal)
+                        ProgressView(value: Double(min(count, next.target)), total: Double(next.target)).tint(Palette.gold)
+                        Text(remaining(for: next)).font(.subheadline).foregroundStyle(Palette.muted)
+                    }.foregroundStyle(Palette.text).padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Palette.gold.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+                }.buttonStyle(.plain).accessibilityHint("Preview this outfit and pin it as your goal.")
+            } else {
+                Text("Every activity outfit earned.").font(.system(.title2, design: .serif)).foregroundStyle(Palette.text)
+                Text("Pick a favourite. They're yours to keep.").font(.subheadline).foregroundStyle(Palette.muted)
             }
-            .padding(16).background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }.buttonStyle(.plain)
+        }
+    }
+
+    private func remaining(for milestone: SkinMilestone) -> String {
+        let count = milestone.progress(logs: store.logs, audience: RewardLedger.audience, calendar: LarpyTime.cal)
+        let left = max(0, milestone.target - count)
+        if let platform = milestone.platform { return "\(left.formatted()) more \(platform.title) followers" }
+        let lane = milestone.lane == .body ? "movement" : milestone.lane == .work ? "Work" : "learning"
+        return "\(left) more \(lane) \(left == 1 ? "day" : "days")"
+    }
+
+    private var outfits: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Your outfits").font(.system(.title2, design: .serif))
+                Spacer()
+                Button("Auto style") { prefs.selectedLookID = "" }
+                    .font(.subheadline).frame(minHeight: 44)
+                    .accessibilityHint("Chooses an outfit from your latest activity.")
+            }.foregroundStyle(Palette.text)
+            Text("\(displayLooks.filter { unlocked.contains($0.id) }.count) owned · Earned outfits stay yours, even after a break.")
+                .font(.subheadline).foregroundStyle(Palette.muted)
+            Picker("Show outfits", selection: $filter) {
+                Text("All").tag(0); Text("Earned").tag(1); Text("Locked").tag(2)
+            }.pickerStyle(.segmented)
+            LazyVGrid(columns: columns, spacing: 14) {
+                ForEach(displayLooks.filter { filter == 0 || (filter == 1 ? unlocked.contains($0.id) : !unlocked.contains($0.id)) }) { item in
+                    let available = unlocked.contains(item.id)
+                    let wearing = item.id == lookID
+                    Button {
+                        if available {
+                            prefs.selectedLookID = item.id
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } else { previewLook = item }
+                    } label: {
+                        VStack(spacing: 6) {
+                            LarpyCharacterView(life: .neutral, base: .cream, kit: item.kit, width: 94,
+                                               showScene: false, level: 1, founderID: item.id, companion: true)
+                                .frame(height: 140)
+                            Text(item.styleName).font(.caption.weight(.medium)).lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                                .frame(minHeight: 30)
+                            Text(available ? (wearing ? "Wearing" : "Earned · tap to wear") : requirement(for: item))
+                                .font(.caption).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if item.id == pinnedSkinID && !available {
+                                Label("Your goal", systemImage: "flag.fill").font(.caption.weight(.semibold)).foregroundStyle(Palette.text)
+                            }
+                            Image(systemName: wearing ? "checkmark.circle.fill" : available ? "circle" : "lock")
+                                .font(.caption).foregroundStyle(wearing ? Palette.gold : Palette.muted)
+                        }.foregroundStyle(Palette.text).padding(.vertical, 10)
+                            .frame(maxWidth: .infinity)
+                            .background(wearing ? Palette.gold.opacity(0.13) : Palette.card.opacity(0.55), in: RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(wearing ? Palette.gold : .clear, lineWidth: 1.5))
+                    }.buttonStyle(.plain)
+                        .accessibilityLabel("\(item.styleName). \(wearing ? "Wearing" : available ? "Tap to wear" : "Locked. " + requirement(for: item) + ". Tap to preview").")
+                        .accessibilityAddTraits(wearing ? .isSelected : [])
+                }
+            }
+        }
+    }
+
+    private var displayLooks: [FounderLook] {
+        let milestones = ProgressRules.skins.sorted {
+            if ($0.platform == nil) != ($1.platform == nil) { return $0.platform == nil }
+            if $0.target != $1.target { return $0.target < $1.target }
+            return $0.id < $1.id
+        }
+        let owned = FounderLook.all.filter { unlocked.contains($0.id) }
+        return owned + milestones.filter { !unlocked.contains($0.id) }.compactMap { FounderLook.find($0.id) }
+    }
+    private func requirement(for look: FounderLook) -> String {
+        guard let milestone = ProgressRules.skins.first(where: { $0.id == look.id }) else { return "Previously earned" }
+        if milestone.target == 0 { return milestone.requirement }
+        let n = milestone.progress(logs: store.logs, audience: RewardLedger.audience, calendar: LarpyTime.cal)
+        return "\(min(n, milestone.target).formatted()) / \(milestone.requirement)"
+    }
+
+    private var scenes: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Set the scene").font(.system(.title2, design: .serif)).foregroundStyle(Palette.text)
+            Text("Backdrops for the cards you share. Today keeps Larpy out in the open.")
+                .font(.subheadline).foregroundStyle(Palette.muted)
+            if !prefs.selectedSceneID.isEmpty {
+                LarpyCharacterView(life: .neutral, base: .cream, kit: look?.kit ?? prefs.kit,
+                                   width: 150, showScene: true, scene: scene, founderID: lookID, companion: true)
+                    .frame(maxWidth: .infinity).frame(height: 230)
+                Text("Selected: \(scene.title)").font(.subheadline).foregroundStyle(Palette.muted)
+            }
+            Button {
+                prefs.selectedSceneID = ""
+            } label: {
+                Label("No backdrop", systemImage: prefs.selectedSceneID.isEmpty ? "checkmark.circle.fill" : "circle")
+                    .font(.subheadline).frame(minHeight: 44)
+            }.foregroundStyle(Palette.text)
+            LazyVGrid(columns: sceneColumns, spacing: 18) {
+                ForEach(MovieScene.collection) { item in
+                    let available = CharacterStyle.sceneAllowed(item, logs: store.logs)
+                    Button {
+                        if available {
+                            prefs.selectedSceneID = item.rawValue
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } else { previewScene = item }
+                    } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            item.panel(w: 48, corner: 14).frame(height: 105)
+                                .opacity(available ? 1 : 0.4)
+                                .overlay(alignment: .topTrailing) {
+                                    if item == scene && !prefs.selectedSceneID.isEmpty {
+                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Palette.ink, Palette.gold)
+                                            .padding(8)
+                                    }
+                                }
+                            Text(item.title).font(.subheadline.weight(.medium)).foregroundStyle(Palette.text)
+                            Text(available ? item.activity : "\(workReceipts)/\(MovieScene.rewardAt) Work receipts · preview")
+                                .font(.caption).foregroundStyle(Palette.muted)
+                        }
+                    }.buttonStyle(.plain)
+                        .accessibilityLabel("\(item.title). \(available ? "Tap to use scene" : "Locked until seven Work receipts. Tap to preview").")
+                        .accessibilityAddTraits(item.rawValue == prefs.selectedSceneID ? .isSelected : [])
+                }
+            }
+        }
+    }
+
+    private var workReceipts: Int { store.logs.filter { $0.quest == .work && $0.isEligible }.count }
+
+    private var appIcons: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("A familiar face.").font(.system(.title2, design: .serif)).foregroundStyle(Palette.text)
+            Text("Choose Larpy's look on your Home Screen. All three are included.").font(.subheadline).foregroundStyle(Palette.muted)
+            ForEach(LarpyIcon.all, id: \.id) { item in
+                Button { changeIcon(to: item.id) } label: {
+                    HStack(spacing: 16) {
+                        Image(uiImage: UIImage(named: item.asset) ?? UIImage()).resizable().scaledToFit()
+                            .frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: 14)).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(item.label).font(.headline)
+                            Text(currentIcon == item.id ? "Selected" : "Tap to use").font(.subheadline).foregroundStyle(Palette.muted)
+                        }
+                        Spacer(minLength: 4)
+                        if currentIcon == item.id { Image(systemName: "checkmark.circle.fill").foregroundStyle(Palette.gold) }
+                    }.foregroundStyle(Palette.text).frame(maxWidth: .infinity, minHeight: 80).contentShape(Rectangle())
+                }.buttonStyle(.plain).disabled(iconBusy || !UIApplication.shared.supportsAlternateIcons)
+                    .accessibilityLabel("\(item.label) app icon. \(currentIcon == item.id ? "Selected" : "Tap to use")")
+                    .accessibilityAddTraits(currentIcon == item.id ? .isSelected : [])
+            }
+            if iconBusy { ProgressView("Changing icon…").tint(Palette.gold) }
+            if !UIApplication.shared.supportsAlternateIcons {
+                Text("Changing the app icon isn't available on this device.").font(.footnote).foregroundStyle(Palette.muted)
+            }
+        }
+    }
+
+    private func changeIcon(to id: String) {
+        guard !iconBusy, UIApplication.shared.supportsAlternateIcons else { return }
+        let target: String? = id.isEmpty ? nil : id
+        if UIApplication.shared.alternateIconName == target { prefs.iconChoice = id; currentIcon = id; return }
+        iconBusy = true
+        UIApplication.shared.setAlternateIconName(target) { error in
+            DispatchQueue.main.async {
+                iconBusy = false
+                if let error { iconError = error.localizedDescription }
+                else { prefs.iconChoice = id; currentIcon = id }
+            }
+        }
     }
 }
 
@@ -272,18 +527,15 @@ struct AchievementSection: View {
             }.frame(maxWidth: .infinity)
             Button { showFollowers = true } label: {
                 HStack(spacing: 14) {
-                    Text("in").font(.system(size: 20, weight: .bold)).foregroundStyle(Palette.load)
-                        .frame(width: 44, height: 44).background(Palette.load.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                    Image(systemName: "person.2").font(.title2).foregroundStyle(Palette.gold)
                     VStack(alignment: .leading, spacing: 5) {
-                        Text(follower.map { $0.threshold > 0 ? "\(fmtTokens($0.threshold)) on LinkedIn" : "Your audience is growing" } ?? "An audience to build in front of")
-                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Palette.text)
-                        Text(follower == nil ? "1k · 10k · 100k. Attach your proof." : "Screenshot attached · self-reported")
-                            .font(.system(size: 13)).foregroundStyle(Palette.muted)
+                        Text("Followers & platform skins").font(.headline).foregroundStyle(Palette.text)
+                        Text("LinkedIn · Instagram · X").font(.subheadline).foregroundStyle(Palette.muted)
                     }
                     Spacer(minLength: 0); Image(systemName: "plus").foregroundStyle(Palette.muted)
                 }.padding(.vertical, 10).contentShape(Rectangle())
             }.buttonStyle(.plain)
-        }.sheet(isPresented: $showFollowers) { FollowerEvidenceSheet(evidence: $evidence) }
+        }.sheet(isPresented: $showFollowers) { AudienceView(store: store) }
     }
     /// The gold level pin from the character, at 28pt. Solid when earned, a line when not.
     private func pin(_ title: String, earned: Bool) -> some View {
@@ -385,6 +637,7 @@ struct FollowerEvidenceSheet: View {
 enum MovieScene: String, CaseIterable, Identifiable {
     case road, neon, diner, rooftop, field, gym, floor, racks, orbit, summit, spotlight, platform, cabin, sea
     case pool, pitch, stairwell, bridge, lamp, whiteboard, hum, dock, table, launch
+    case garage, hilltop, clocktower
     var id: String { rawValue }
 
     /// Sentence case for the wardrobe grid.
@@ -407,21 +660,46 @@ enum MovieScene: String, CaseIterable, Identifiable {
         case .pool:      "Pool at six"
         case .pitch:     "The pitch under lights"
         case .stairwell: "Stairwell, floor nine"
-        case .bridge:    "Bridge at dawn"
+        case .bridge:    "Golden Gate"
         case .lamp:      "Lamp on the shelf"
         case .whiteboard: "Tape on the whiteboard"
         case .hum:       "Server hum at 2am"
         case .dock:      "Loading dock"
         case .table:     "The demo table"
         case .launch:    "Launch pad, wind up"
+        case .garage:    "The first garage"
+        case .hilltop:   "City of stars"
+        case .clocktower: "Clock-tower square"
         }
     }
 
     /// Monospaced caption under the actor.
     var caption: String { title.uppercased() }
 
+    static var collection: [MovieScene] {
+        let featured: [MovieScene] = [.garage, .bridge, .hilltop, .clocktower, .spotlight, .gym, .diner, .orbit]
+        return featured + allCases.filter { !featured.contains($0) }
+    }
+
+    var activity: String {
+        switch self {
+        case .garage: "Building the first version"
+        case .bridge: "A coffee walk in SF"
+        case .hilltop: "Dancing above Los Angeles"
+        case .clocktower: "Waiting for a little lightning"
+        case .spotlight: "One more thing…"
+        case .gym: "Getting the reps in"
+        case .diner: "Pancakes and a big idea"
+        case .orbit: "Taking the side project to space"
+        default: "Take Larpy somewhere new"
+        }
+    }
+
     private var sky: (UInt, UInt) {
         switch self {
+        case .garage:   (0xEAE1D0, 0xF5EBDA)
+        case .hilltop:  (0x454767, 0xD7A194)
+        case .clocktower: (0xD6E3E7, 0xF2E4C9)
         case .road:      (0xF6D9A8, 0xE9A87C)
         case .neon:      (0x2C3350, 0x3E3352)
         case .diner:     (0x24262E, 0x33333A)
@@ -450,6 +728,9 @@ enum MovieScene: String, CaseIterable, Identifiable {
     }
     private var land: UInt {
         switch self {
+        case .garage: 0xBBA58A
+        case .hilltop: 0x5B6263
+        case .clocktower: 0xBAA58E
         case .road: 0xC98F63
         case .neon: 0x232839
         case .diner: 0x4A3B30
@@ -479,6 +760,9 @@ enum MovieScene: String, CaseIterable, Identifiable {
     /// The one saturated note per scene.
     private var accent: UInt {
         switch self {
+        case .garage: 0x78836B
+        case .hilltop: 0xF2D49B
+        case .clocktower: 0xB27855
         case .road: 0xE4622F
         case .neon: 0xFF4D7A
         case .diner: 0xE9C468
@@ -532,7 +816,7 @@ enum MovieScene: String, CaseIterable, Identifiable {
         switch hour {
         case 5..<8: return Color(hex: 0xF0A46A).opacity(0.16)
         case 18..<21: return Color(hex: 0xC4593A).opacity(0.20)
-        case 21..<24, 0..<5: return Color(hex: 0x101828).opacity(Theme.isDark ? 0.22 : 0.42)
+        case 21..<24, 0..<5: return Color(hex: 0x101828).opacity(Theme.isDark ? 0.14 : 0.12)
         default: return .clear
         }
     }
@@ -550,6 +834,9 @@ enum MovieScene: String, CaseIterable, Identifiable {
     /// panel, so everything that must stay visible sits outside that band or above the head.
     @ViewBuilder private func elements(d: CGFloat, hz: CGFloat, h: CGFloat, pw: CGFloat) -> some View {
         switch self {
+        case .garage: garage(d, hz, h, pw)
+        case .hilltop: hilltop(d, hz, h, pw)
+        case .clocktower: clocktower(d, hz, h, pw)
         case .road: road(d, hz, h, pw)
         case .neon: neon(d, hz, h, pw)
         case .diner: diner(d, hz, h, pw)
@@ -574,6 +861,91 @@ enum MovieScene: String, CaseIterable, Identifiable {
         case .dock: dock(d, hz, h, pw)
         case .table: table(d, hz, h, pw)
         case .launch: launch(d, hz, h, pw)
+        }
+    }
+
+    private func garage(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        Canvas { context, size in
+            let w = size.width
+            func rect(_ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat, _ color: UInt) {
+                context.fill(Path(CGRect(x: x, y: y, width: width, height: height)), with: .color(Color(hex: color)))
+            }
+            rect(0, hz, w, max(0, h - hz), 0xBBA58A)
+            // Roll-up door, exposed beams, and a workbench: the first office.
+            rect(w * 0.04, h * 0.08, w * 0.56, hz - h * 0.08, 0xC7BCAA)
+            for i in 0..<7 {
+                rect(w * 0.05, h * 0.10 + CGFloat(i) * h * 0.09, w * 0.54, 1, 0xAEA28F)
+            }
+            rect(0, h * 0.045, w, 6, 0x917F67)
+            rect(w * 0.72, h * 0.10, w * 0.23, h * 0.25, 0x92846F)
+            rect(w * 0.73, h * 0.11, w * 0.21, h * 0.23, 0xC4D7D4)
+            rect(w * 0.83, h * 0.11, 3, h * 0.23, 0x92846F)
+            rect(w * 0.68, hz - 48, w * 0.29, 7, 0x80694E)
+            rect(w * 0.70, hz - 41, 5, 41, 0x80694E)
+            rect(w * 0.93, hz - 41, 5, 41, 0x80694E)
+            rect(w * 0.77, hz - 78, 37, 28, 0xD7CCB5)
+            rect(w * 0.78, hz - 75, 29, 20, 0x66766C)
+            rect(w * 0.065, hz - 28, 30, 28, 0xA98B64)
+            rect(w * 0.10, hz - 39, 29, 11, 0xC0A277)
+            context.draw(Text("v0.1").font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundColor(Color(hex: 0xE9E4D4)), at: CGPoint(x: w * 0.78 + 14, y: hz - 65))
+        }
+    }
+
+    private func hilltop(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        Canvas { context, size in
+            let w = size.width
+            for i in 0..<36 {
+                let x = CGFloat((i * 47 + 13) % 100) / 100 * w
+                let y = CGFloat((i * 23 + 7) % 46) / 100 * h
+                context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: 1.5, height: 1.5)), with: .color(Color(hex: 0xF7EBD4).opacity(0.65)))
+            }
+            context.fill(Path(ellipseIn: CGRect(x: w * 0.72, y: h * 0.13, width: 23, height: 23)), with: .color(Color(hex: 0xF2D49B)))
+            for i in 0..<20 {
+                let height = CGFloat((i * 13) % 22 + 12)
+                let x = CGFloat(i) * w / 20
+                context.fill(Path(CGRect(x: x, y: hz - 35 - height, width: w / 20 - 2, height: height + 35)), with: .color(Color(hex: 0x676879)))
+                context.fill(Path(CGRect(x: x + 4, y: hz - 27 - height, width: 2, height: 3)), with: .color(Color(hex: 0xE8C99B)))
+            }
+            context.fill(Path(CGRect(x: 0, y: hz, width: w, height: max(0, h - hz))), with: .color(Color(hex: 0x5B6263)))
+            let lampX = w * 0.13
+            var pole = Path(); pole.move(to: CGPoint(x: lampX, y: hz)); pole.addLine(to: CGPoint(x: lampX, y: h * 0.17))
+            context.stroke(pole, with: .color(Color(hex: 0x343C43)), lineWidth: 3)
+            context.fill(Path(ellipseIn: CGRect(x: lampX - 6, y: h * 0.17 - 12, width: 12, height: 16)), with: .color(Color(hex: 0xF2D49B)))
+            // A bench at the overlook, clear of Larpy's silhouette.
+            for y in [hz - 26, hz - 17] {
+                context.fill(Path(CGRect(x: w * 0.74, y: y, width: w * 0.20, height: 5)), with: .color(Color(hex: 0xA89A86)))
+            }
+            for x in [w * 0.76, w * 0.91] {
+                context.fill(Path(CGRect(x: x, y: hz - 17, width: 3, height: 17)), with: .color(Color(hex: 0x343C43)))
+            }
+        }
+    }
+
+    private func clocktower(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
+        Canvas { context, size in
+            let w = size.width
+            let building = CGRect(x: w * 0.60, y: h * 0.34, width: w * 0.35, height: hz - h * 0.34)
+            context.fill(Path(building), with: .color(Color(hex: 0xC6B297)))
+            context.fill(Path(CGRect(x: w * 0.715, y: h * 0.13, width: w * 0.12, height: h * 0.24)), with: .color(Color(hex: 0xB69C7D)))
+            var roof = Path(); roof.move(to: CGPoint(x: w * 0.69, y: h * 0.14)); roof.addLine(to: CGPoint(x: w * 0.775, y: h * 0.06)); roof.addLine(to: CGPoint(x: w * 0.86, y: h * 0.14)); roof.closeSubpath()
+            context.fill(roof, with: .color(Color(hex: 0x806F62)))
+            let center = CGPoint(x: w * 0.775, y: h * 0.225)
+            context.fill(Path(ellipseIn: CGRect(x: center.x - 11, y: center.y - 11, width: 22, height: 22)), with: .color(Color(hex: 0xF7EED9)))
+            var hands = Path(); hands.move(to: CGPoint(x: center.x - 5, y: center.y)); hands.addLine(to: center); hands.addLine(to: CGPoint(x: center.x, y: center.y - 7))
+            context.stroke(hands, with: .color(Color(hex: 0x67594C)), lineWidth: 1.5)
+            for i in 0..<4 {
+                context.fill(Path(CGRect(x: w * (0.64 + CGFloat(i) * 0.075), y: h * 0.42, width: 6, height: hz - h * 0.42)), with: .color(Color(hex: 0xE8DAC1)))
+            }
+            context.fill(Path(CGRect(x: 0, y: hz, width: w, height: max(0, h - hz))), with: .color(Color(hex: 0xBAA58E)))
+            // A small silver car and twin orange tracks crossing the square.
+            let car = CGRect(x: w * 0.055, y: hz - 20, width: w * 0.20, height: 14)
+            context.fill(Path(roundedRect: car, cornerRadius: 3), with: .color(Color(hex: 0x8E9B9C)))
+            for x in [car.minX + 8, car.maxX - 9] {
+                context.fill(Path(ellipseIn: CGRect(x: x - 4, y: hz - 11, width: 8, height: 8)), with: .color(Color(hex: 0x4E514E)))
+            }
+            for y in [hz + 6, hz + 12] {
+                context.fill(Path(CGRect(x: w * 0.02, y: y, width: w * 0.30, height: 2)), with: .color(Color(hex: 0xCD9355)))
+            }
         }
     }
 
@@ -632,20 +1004,37 @@ enum MovieScene: String, CaseIterable, Identifiable {
     }
 
     private func bridge(_ d: CGFloat, _ hz: CGFloat, _ h: CGFloat, _ pw: CGFloat) -> some View {
-        let g = gy(hz, h)
-        return ZStack {
-            Circle().fill(Color(hex: accent).opacity(0.8))
-                .frame(width: d * 0.26, height: d * 0.26)
-                .offset(x: pw * 0.30, y: g - d * 0.52)
-            ForEach(0..<2, id: \.self) { side in
-                Rectangle().fill(Color(hex: land).opacity(0.85))
-                    .frame(width: d * 0.06, height: d * 0.70)
-                    .offset(x: pw * (side == 0 ? -0.36 : 0.36), y: g - d * 0.35)
+        Canvas { context, size in
+            let w = size.width
+            let deck = h * 0.68
+            let towerTop = h * 0.15
+            let rust = Color(hex: 0xBC6445)
+            context.fill(Path(CGRect(x: 0, y: deck + 6, width: w, height: h - deck)), with: .color(Color(hex: 0x96B5B7)))
+            for fraction in [CGFloat(0.19), 0.81] {
+                let x = w * fraction
+                for offset in [CGFloat(-5), 5] {
+                    context.fill(Path(CGRect(x: x + offset, y: towerTop, width: 4, height: deck - towerTop + 15)), with: .color(rust))
+                }
+                for fraction in [CGFloat(0.26), 0.43, 0.59] {
+                    context.fill(Path(CGRect(x: x - 5, y: h * fraction, width: 14, height: 3)), with: .color(rust))
+                }
             }
-            CurveLine(bend: 0.45).stroke(Color(hex: land).opacity(0.7), lineWidth: max(1, d * 0.008))
-                .frame(width: pw * 0.72, height: d * 0.30)
-                .offset(y: g - d * 0.60)
-            ground(h, hz)
+            var cable = Path()
+            cable.move(to: CGPoint(x: -15, y: deck - 3))
+            cable.addQuadCurve(to: CGPoint(x: w * 0.19, y: towerTop + 3), control: CGPoint(x: w * 0.09, y: h * 0.44))
+            cable.addQuadCurve(to: CGPoint(x: w * 0.81, y: towerTop + 3), control: CGPoint(x: w * 0.50, y: h * 0.91))
+            cable.addQuadCurve(to: CGPoint(x: w + 15, y: deck - 3), control: CGPoint(x: w * 0.91, y: h * 0.44))
+            context.stroke(cable, with: .color(rust), lineWidth: 2)
+            for i in 1..<10 {
+                let t = CGFloat(i) / 10
+                let x = w * (0.19 + t * 0.62)
+                let y = (1-t)*(1-t)*(towerTop+3) + 2*(1-t)*t*h*0.91 + t*t*(towerTop+3)
+                var drop = Path(); drop.move(to: CGPoint(x: x, y: y)); drop.addLine(to: CGPoint(x: x, y: deck))
+                context.stroke(drop, with: .color(rust.opacity(0.75)), lineWidth: 1)
+            }
+            context.fill(Path(CGRect(x: 0, y: deck, width: w, height: 5)), with: .color(rust))
+            context.fill(Path(CGRect(x: 0, y: hz, width: w, height: max(0, h - hz))), with: .color(Color(hex: 0xB8A38A)))
+            context.fill(Path(ellipseIn: CGRect(x: w * 0.02, y: h * 0.24, width: w * 0.34, height: 13)), with: .color(Color.white.opacity(0.22)))
         }
     }
 

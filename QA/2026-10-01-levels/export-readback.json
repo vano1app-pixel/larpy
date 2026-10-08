@@ -1,0 +1,19 @@
+{
+  "id": "30C15621-6194-42BC-A8EF-98A092AB0583",
+  "name": "You",
+  "version": 1,
+  "timeZoneID": "Europe/Dublin",
+  "weekEnd": "2026-10-04",
+  "lifetimeDays": {
+    "Body": 0,
+    "Work": 1,
+    "Learn": 0
+  },
+  "weekDays": {
+    "Body": 0,
+    "Work": 1,
+    "Learn": 0
+  },
+  "weekStart": "2026-09-28",
+  "generatedAt": 812569063.308117
+}

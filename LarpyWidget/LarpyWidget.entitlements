@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.larpy.app</string>
+		<string>group.com.vano.larpy</string>
 	</array>
 </dict>
 </plist>

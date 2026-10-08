@@ -1,0 +1,47 @@
+name: LarpyPaymentQA
+options:
+  deploymentTarget: { iOS: "17.0" }
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGNING_ALLOWED: YES
+    CODE_SIGN_IDENTITY: "-"
+    GENERATE_INFOPLIST_FILE: YES
+targets:
+  LarpyPaymentQA:
+    type: application
+    platform: iOS
+    sources:
+      - path: ../../Larpy
+        excludes: [Info.plist, Larpy.entitlements]
+      - path: ../../Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vano.larpy.paymentqa
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+  LarpyPaymentTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ../../Tests/StoreKitFlowTests.swift
+      - path: ../../LarpyPlus.storekit
+        buildPhase: resources
+    dependencies:
+      - target: LarpyPaymentQA
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vano.larpy.paymenttests
+schemes:
+  LarpyPaymentQA:
+    build:
+      targets:
+        LarpyPaymentQA: all
+        LarpyPaymentTests: [test]
+    run:
+      config: Debug
+      storeKitConfiguration: ../../LarpyPlus.storekit
+    test:
+      config: Debug
+      targets: [LarpyPaymentTests]

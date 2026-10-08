@@ -1,0 +1,20 @@
+{
+  "identifier": "LARPYPLUSQA",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": { "_applicationInternalID": "6819279029", "_developerTeamID": "36RZ9VDHBC", "_storefront": "IRL", "_locale": "en_GB" },
+  "subscriptionGroups": [{
+    "id": "larpy-plus-qa",
+    "localizations": [],
+    "name": "Larpy Plus",
+    "subscriptions": [{
+      "adHocOffers": [], "codeOffers": [], "displayPrice": "2.00", "familyShareable": false,
+      "groupNumber": 1, "internalID": "LARPYWEEKLYQA",
+      "introductoryOffer": { "internalID": "LARPYMONTHTRIALQA", "paymentMode": "free", "subscriptionPeriod": "P1M" },
+      "localizations": [{ "description": "Weekly activity comparisons, summaries and next steps.", "displayName": "Larpy Plus — weekly", "locale": "en_GB" }],
+      "productID": "com.vano.larpy.plus.weekly", "recurringSubscriptionPeriod": "P1W",
+      "referenceName": "Larpy Plus Weekly QA", "subscriptionGroupID": "larpy-plus-qa", "type": "RecurringSubscription"
+    }]
+  }],
+  "version": { "major": 4, "minor": 0 }
+}

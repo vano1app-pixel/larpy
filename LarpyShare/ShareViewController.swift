@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 /// Tap Larpy in YouTube's share sheet, then File Load. No app-opening responder hack.
 /// Committed inputs wait durably in the App Group until Larpy imports them.
 final class ShareViewController: UIViewController {
-    private let suite = "group.com.larpy.app"
+    private let suite = "group.com.vano.larpy"
     private var incomingURL: String?
     private var incomingText: String?
     private var incomingImage: Data?
@@ -21,18 +21,18 @@ final class ShareViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 0.961, green: 0.941, blue: 0.902, alpha: 1)
         let stack = UIStackView(); stack.axis = .vertical; stack.spacing = 22; stack.translatesAutoresizingMaskIntoConstraints = false
-        let eyebrow = UILabel(); eyebrow.text = "LARPY / LEARNT"; eyebrow.font = .monospacedSystemFont(ofSize: 12, weight: .bold)
-        eyebrow.textColor = UIColor(red: 0.36, green: 0.55, blue: 1, alpha: 1)
-        let title = UILabel(); title.text = "Homework. Own it."; title.font = .systemFont(ofSize: 32, weight: .semibold)
-        subtitle.text = "Reading the shared receipt…"; subtitle.numberOfLines = 3; subtitle.font = .systemFont(ofSize: 15)
+        let eyebrow = UILabel(); eyebrow.text = "Larpy · Learnt"; eyebrow.font = .preferredFont(forTextStyle: .headline)
+        eyebrow.textColor = .darkGray
+        let title = UILabel(); title.text = "Keep what you learnt."; title.font = .preferredFont(forTextStyle: .title1); title.numberOfLines = 0
+        subtitle.text = "Reading your link…"; subtitle.numberOfLines = 3; subtitle.font = .preferredFont(forTextStyle: .body)
         subtitle.textColor = .darkGray
         use.placeholder = "What are you using this for? (optional)"; use.font = .systemFont(ofSize: 16)
         use.borderStyle = .roundedRect; use.returnKeyType = .done
-        saveButton.setTitle("Log learning", for: .normal); saveButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
+        saveButton.setTitle("Save to Learnt", for: .normal); saveButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
         saveButton.setTitleColor(.black, for: .normal); saveButton.backgroundColor = UIColor(red: 0.769, green: 0.639, blue: 0.353, alpha: 1)
         saveButton.layer.cornerRadius = 16; saveButton.heightAnchor.constraint(equalToConstant: 56).isActive = true
         saveButton.addTarget(self, action: #selector(save), for: .touchUpInside); saveButton.isEnabled = false; saveButton.alpha = 0.4
-        let note = UILabel(); note.text = "This goes in Learnt. Finished output goes in Work."; note.numberOfLines = 0; note.font = .systemFont(ofSize: 12); note.textColor = .darkGray
+        let note = UILabel(); note.text = "Saved here. Added to your day when you next open Larpy."; note.numberOfLines = 0; note.font = .preferredFont(forTextStyle: .footnote); note.textColor = .darkGray
         let cancel = UIButton(type: .system); cancel.setTitle("Cancel", for: .normal); cancel.addTarget(self, action: #selector(close), for: .touchUpInside)
         [eyebrow, title, subtitle, use, saveButton, note, cancel].forEach { stack.addArrangedSubview($0) }
         view.addSubview(stack)
@@ -89,13 +89,13 @@ final class ShareViewController: UIViewController {
                 let draft = Draft(url: incomingURL, text: use.text, imageFile: name, at: .now)
                 defaults.set(try JSONEncoder().encode(draft), forKey: "shareDraft")
             } else {
-                var queue: [Input] = []
-                if let data = defaults.data(forKey: "incomingLoads") { queue = try JSONDecoder().decode([Input].self, from: data) }
-                queue.append(Input(id: UUID(), url: incomingURL, text: incomingText, use: use.text ?? "", at: .now))
-                defaults.set(try JSONEncoder().encode(queue), forKey: "incomingLoads")
+                let input = Input(id: UUID(), url: incomingURL, text: incomingText, use: use.text ?? "", at: .now)
+                let dir = container.appendingPathComponent("LearningInbox", isDirectory: true)
+                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                try JSONEncoder().encode(input).write(to: dir.appendingPathComponent("\(input.id.uuidString).json"), options: .atomic)
             }
             saveButton.isEnabled = false
-            saveButton.setTitle(incomingImage == nil ? "Filed. Now use it." : "Draft ready. Open Larpy.", for: .normal)
+            saveButton.setTitle(incomingImage == nil ? "Saved to Learnt" : "Draft ready. Open Larpy.", for: .normal)
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) { self.close() }
         } catch { subtitle.text = "Couldn't keep the receipt. Try again." }

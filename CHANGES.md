@@ -1,4 +1,85 @@
+# 6 October 2026 — build 4 review correction
+
+- Removed the Plus gate from all app blocking and timed breaks to comply with Apple Guideline 4.10. Plus covers detailed local weekly reviews only; purchase/trial pricing is unchanged.
+- Corrected paywall, onboarding, settings, subscription localization, App Store description, review notes and public support copy.
+- Focus (38) and weekly-review (12) checks passed again. Main simulator build, signed archive and six-target archive verification passed. Build 1.0 (4) uploaded and Apple processed it as VALID / APP_STORE_ELIGIBLE.
+- Uploaded real 6.9-inch iPhone and 13-inch iPad home/focus screenshots and replaced the obsolete subscription-review screenshot; all five are COMPLETE with Apple.
+- Configured Productivity, free download pricing and original-content answer. App Privacy publication, owner banking/tax and physical-device QA remain open. See [submission status](SUBMISSION-2026-10-06.md).
+
+## Earlier build 3 implementation — paid focus scope superseded above
+
+# 6 October 2026 — Larpy Plus and weekly review
+
+- Added a StoreKit 2 weekly subscription path with verified transaction access, eligible introductory-offer copy, immediate unlock, restore, expiry/revocation handling and subscription management. No price is hardcoded in the shipping UI.
+- Kept core logging, basic focus timers, saved activities and earned outfits free. New protected sessions require Plus. Existing sessions can still be ended after access expires.
+- Added matching-weekday comparisons for Work, Body and Learnt, a next-step suggestion and a local weekly reflection. Imported dates, duplicate activity days and first-week empty states have regression checks; notes do not grant XP.
+- Removed the empty usage-counter panel until a source is connected, exposed the free timer, and hid the unconfigured seasonal shop unless its product loads or it was previously owned.
+- Published working support/privacy pages and updated Apple's draft privacy/support metadata. Created the draft Larpy Plus weekly product, one-month trial and EUR 2 Ireland price with Apple-equalized territory prices. No release submission or real customer charge occurred.
+- 205 Swift checks plus five Python tests pass; final simulator build passes. Payment and device evidence remains separate; see [PAYMENTS-2026-10-06.md](PAYMENTS-2026-10-06.md).
+- Verified local StoreKit purchase, restore and refund manually. Refreshed trial eligibility alongside entitlement changes. Resolved distribution signing for all Screen Time targets and added the Health purpose key required by Apple's upload validator without requesting Health writes.
+- Uploaded signed 1.0 (3); Apple processed it as VALID. Prepared the internal QA group and test notes and selected the build in the editable release draft. No tester invitation, App Review submission or public release occurred.
+
+# 1 October 2026 — release audit and pricing cleanup
+
+- Removed the obsolete €2.99 wardrobe-wide paywall and its dead screens. Progression skins and app activity remain free; the optional seasonal collection is the only purchase path. Older receipt and paid-wardrobe migration fields remain supported.
+- Apple rejected `com.larpy.app` as unavailable. Registered `com.vano.larpy`, `com.vano.larpy.widget`, and `com.vano.larpy.share` under the team’s existing `com.vano.*` namespace; enabled App Groups on all three and HealthKit on the main app ID. Xcode now uses these IDs and team `36RZ9VDHBC`. The shared App Group still needs portal registration/linking. No App Store record has been created.
+- `https://larpy.app` currently returns `DEPLOYMENT_NOT_FOUND`; no public privacy or support page is live. Apple’s website requires creating the app record. The Developer portal is at its Apple Account sign-in screen. See [current completion and evidence](COMPLETION-2026-09-30.md).
+- Rebuilt app, widget and share extension successfully for iOS Simulator. Signed-device behavior remains unverified.
+
+# 30 September 2026 — living companion pass
+
+- Promoted the large companion to Today; added a visible walk/wave cycle, tap greetings, optional naming, Buddy / Coach / Little menace and matching reminder copy. Reduced Motion and background pausing retained.
+- Replaced the month grid with dated outfit stamps, newest first. Added opt-in EventKit upcoming plans and user-confirmed 25-minute blocks. Plans cannot unlock skins.
+- Added three 100-day achievement costumes plus the three-outfit After dark collection. StoreKit product `com.vano.larpy.afterdark2026` uses verified transactions, revocation checks, restore and actual localised pricing only; unavailable products stay previews. Legacy migration is capped at the original 54 looks.
+- Added consent-controlled JSON friend snapshots, import validation, dated same-window activity/token comparison, follower source dates and deletion. No automatic friend sync or identity verification is claimed.
+- Built Larpy Desktop: a draggable floating pet, menu controls, focus timer, optional chosen-app nudges, pause/hide/quit, and folder-based Codex/Claude Code usage sync. Local arm64 macOS 14+ build; not notarized or released.
+- Clarified connector capability limits for OpenAI API, TradingView and social platforms. No fake OAuth, email sending, SMS or iPhone app overlays.
+
+## 30 September 2026 — progression skins and simpler navigation
+
+Implemented career setup, Today / Progress / Skins, day-based rewards, 10k LinkedIn / Instagram / X rewards with explicitly manual screenshot evidence, original costume details, migration and privacy work. See [the completion report](COMPLETION-2026-09-30.md) for actual verification and remaining live-connection/release requirements.
+
 # Larpy — what changed
+
+## Normal sizing and a clearer Today — 8 September 2026
+
+- The QA simulator had been left at `accessibility-extra-extra-extra-large`. Restored `large`, the standard iPhone text category. No app-wide text-size cap was added.
+- Today has a smaller scene (190pt, actor width 106pt), a shorter instruction — "Pick one activity. Save what you did." — and more room for the three actions and weekly count. Reward wording no longer promises an outfit for every activity indefinitely; the all-three state confirms receipts are saved.
+- At larger text sizes, Today header, scene controls and activity heading stack vertically. Header height can grow; accessibility-size row hints wrap fully. Activity rows have explicit button traits and hints for adding a first or another receipt.
+- Character interaction state clears when leaving the screen, backgrounding or changing Reduce Motion. Drag release settles over 200ms without spring overshoot. Theme, header and press animations respect Reduce Motion.
+
+### Verified / limits
+
+- Final app, widget and share-extension simulator build succeeded. All 36 receipt checks passed; diff whitespace check passed. Existing uncommitted connection, wardrobe and receipt work was preserved.
+- Live normal-size Today showed all three actions and the weekly count. Largest accessibility text showed the full Today and Connect labels. Screenshot: `QA/today-normal-sizing-2026-09-08.png`. Simulator returned to standard text size after the check.
+- Further Simulator UI control was rejected by automatic approval review ("Computer Use was not approved to use Simulator"). Remaining form-tap, scroll, drag interruption, Reduce Motion interaction and dark-mode checks were not completed. No signed-device or customer-retention claim; no release made.
+
+## Simpler Today, personal styles, and connected activity — 7 September 2026
+
+- Today now explains the aim in plain language and always shows **Gym & movement / Work & building / Learnt & tokens**, including on day one. Larger system text, neutral icons, one gold Work action. Weekly detail follows the three actions. The fixed header prevents the title sliding behind the status bar after a sheet closes.
+- **Connect** and **Customize** are visible actions. The wardrobe now applies and persists outfits, with four starter styles and further looks earned from activity. Scenes have a separate picker. Today, new receipts and the share image resolve the same selected appearance; old receipts keep their original appearance.
+- Larpy keeps the cream egg and open eyes, with softer body shading. Added a startup garage, starry Los Angeles overlook and clock-tower square; redrew Golden Gate. These are original illustrations. Founder-inspired starter styles are named for their clothes/role, not real people.
+- Forms explain their input. Tokens have 1k/10k/100k shortcuts. Body still requires a photo or a real timer; Work still requires a valid link or image. Learning and token usage never become Work XP.
+- **Connections** introduces YouTube sharing, Mac agent usage and Apple Health workouts. The share extension is named Larpy and says Save to Learnt. Link shares use separate atomic inbox files so an app import cannot overwrite a simultaneous share. Old queues still import.
+- **Mac companion:** `Companion/larpy_sync.py` reads local Codex and Claude Code usage, deduplicates repeated/cumulative/streaming records, and writes only daily totals to iCloud Drive/Larpy/usage.json. No prompts, code or provider keys are exported. The iPhone selects that folder once with the Files picker; it refreshes on open and every minute while active. Stable source/day IDs update existing Learnt totals rather than making more receipts. Usage starts on the connection day. Other agents/cloud sessions are not claimed as supported.
+- **Apple Health:** optional read-only access to workouts, foreground refresh and an observer for background delivery. Ignores workouts marked manually entered, requires at least 60 seconds, and adds at most one automatic Body receipt per day. Permission-sheet completion is not presented as proven read access. Includes HealthKit entitlements and usage description.
+- The legacy Settings costume picker now opens the working customizer. Optional AI provider keys are labelled separately from usage connections.
+
+### Verified
+
+- Final handoff recheck on 8 September: 36 receipt checks and five companion tests passed again; the saved simulator screenshot is `QA/today-simple-2026-09-07.png`.
+- App, widget and share extension simulator build succeeded; 36 receipt/compatibility checks and five companion tests passed; git diff whitespace check passed.
+- Live simulator: light/dark Today, outfit selection, scene persistence after restart, token shortcut and save. A 10k token entry completed Learnt with zero Work that week.
+- Real local Codex/Claude Code counter export and simulator import: two source/day records. Relaunch/re-import left 14 total QA records unchanged; increasing the snapshot updated the same IDs and still left 14 records. Work remained unchanged. Temporary manual/sync test entries were subsequently removed by restoring the pre-test QA receipts and preferences.
+- Foreground Mac companion completed repeated iCloud updates. A login-time LaunchAgent was attempted, but macOS denied its iCloud replacement write. The failing job was stopped and its plist moved out of LaunchAgents; **automatic login startup is not installed**. Use the foreground companion for now; a packaged Mac app with explicit folder access remains necessary for a clean startup flow.
+
+### Still needs a phone / provider
+
+- Signed-device Apple Health permission and background-delivery checks, and an actual YouTube-app → Larpy share. Simulator compilation is not evidence those device integrations are active.
+- Phone-side selection of the companion's iCloud folder. A folder connection in simulator tests does not verify cross-device iCloud delivery.
+- The user's gym/app name and its supported check-in integration. No QR interception or fake check-in was added. Cursor/editor and remote-agent adapters require their own supported usage sources.
+- Manually logged tokens can overlap a source/day that is later connected. Existing manual entries are preserved, not silently removed.
+
 
 ## Names out of the code, Friday Tape, witness, quiet pings — 6 September 2026 (afternoon)
 

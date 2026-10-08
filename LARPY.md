@@ -38,7 +38,7 @@ Motivation = visible empty days + a card you can shove in someone’s face.
 
 - App name: **LARPY**
 - Subtitle later: `Focus & Weekly Grind`
-- Bundle ID: `com.larpy.app`
+- Bundle ID: `com.vano.larpy`
 - Display name on home screen: LARPY
 
 Check App Store name availability before ship. Do not spend this session on ASO.
@@ -158,7 +158,7 @@ Xcode project inside that folder: `Larpy.xcodeproj` (or a folder-based app `Larp
 **GitHub:** private repo `larpy` under the logged-in GitHub account (likely `vano1app-pixel`).  
 Do not make it public. Do not add VANO collaborators by default.
 
-**Bundle ID:** `com.larpy.app`  
+**Bundle ID:** `com.vano.larpy`
 **Git branch:** `main` for this greenfield app (no 667 rule — that rule is VANO-only).
 
 ---

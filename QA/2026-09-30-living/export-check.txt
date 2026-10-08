@@ -1,0 +1,1 @@
+PASS: native file export saved expected QA activity days and optional follower count; tokens absent when unavailable; no activity content, links, calendar events or images.

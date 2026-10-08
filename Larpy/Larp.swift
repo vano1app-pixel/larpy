@@ -2,193 +2,182 @@ import Foundation
 import StoreKit
 import SwiftUI
 
-/// The one thing for sale. After the free month the wardrobe pauses: no new looks, no new rooms.
-/// Everything else is free forever: logging, history, the week, the widget, the share card, the friend.
-/// Nothing here is ever shown automatically. The ask is reached from the paused wardrobe card and Settings.
+/// Compatibility for older receipts and paid wardrobe entitlements.
+/// Current progression skins are always earned; optional purchases live in the
+/// separate seasonal collection.
 enum Larp {
-    static let productID = "com.larpy.app.larp"
-    static let freeDays = 30
-    /// Shown until StoreKit has answered. Small on purpose: an impulse, not a contract.
-    static let fallbackPrice = "€2.99"
-
     static var unlocked: Bool {
         get { UserDefaults.standard.bool(forKey: "larpUnlocked") }
         set { UserDefaults.standard.set(newValue, forKey: "larpUnlocked") }
     }
+
     static var firstReceiptAt: Date? {
-        let t = UserDefaults.standard.double(forKey: "firstReceiptAt")
-        return t > 0 ? Date(timeIntervalSince1970: t) : nil
+        let timestamp = UserDefaults.standard.double(forKey: "firstReceiptAt")
+        return timestamp > 0 ? Date(timeIntervalSince1970: timestamp) : nil
     }
+
+    /// Used only by the one-time migration that preserves older earned looks.
     static var freeUntil: Date? {
-        guard let first = firstReceiptAt else { return nil }
-        return LarpyTime.cal.date(byAdding: .day, value: freeDays, to: first)
+        guard let firstReceiptAt else { return nil }
+        return LarpyTime.cal.date(byAdding: .day, value: 30, to: firstReceiptAt)
     }
-    /// Days of free wardrobe left. nil before the first receipt.
-    static var daysLeft: Int? {
-        guard let until = freeUntil else { return nil }
-        return max(0, LarpyTime.cal.dateComponents([.day], from: LarpyTime.cal.startOfDay(for: .now), to: LarpyTime.cal.startOfDay(for: until)).day ?? 0)
-    }
-    /// True while looks and rooms still change with receipts.
-    static var wardrobeOpen: Bool {
-        if unlocked { return true }
-        guard let until = freeUntil else { return true }
-        return Date() < until
-    }
-    static func wardrobeOpen(prefs: Prefs) -> Bool { wardrobeOpen }
-    static var untilLine: String? {
-        guard let until = freeUntil, !unlocked else { return nil }
-        let f = DateFormatter(); f.calendar = LarpyTime.cal; f.dateFormat = "d MMM"
-        return "WARDROBE OPEN UNTIL \(f.string(from: until).uppercased())"
-    }
+
+    static var wardrobeOpen: Bool { true }
+    static func wardrobeOpen(prefs: Prefs) -> Bool { true }
 }
 
-/// StoreKit 2. One non-consumable. Loads the price, buys, restores, and listens for transactions.
+/// The seasonal collection is the only optional purchase. Progression outfits
+/// remain separate and can never be bought to skip their requirements.
 @MainActor
-final class LarpStore: ObservableObject {
-    @Published var product: Product?
-    @Published var busy = false
-    @Published var message: String?
-    private var updates: Task<Void, Never>?
+final class SeasonalShop: ObservableObject {
+    static let shared = SeasonalShop()
+    nonisolated static let productID = "com.vano.larpy.afterdark2026"
+    nonisolated static let lookIDs: Set<String> = ["season-pumpkin", "season-vampire", "season-wizard"]
+    nonisolated static let titles = ["season-pumpkin": "Pumpkin shift", "season-vampire": "Night shift", "season-wizard": "Spell check"]
+    nonisolated static var cachedLooks: Set<String> {
+        UserDefaults.standard.bool(forKey: "seasonAfterDarkOwned") ? lookIDs : []
+    }
+
+    @Published private(set) var owned = false
+    @Published private(set) var product: Product?
+    @Published private(set) var busy = false
+    @Published private(set) var message: String?
+    private var watcher: Task<Void, Never>?
 
     init() {
-        updates = Task { [weak self] in
+        watcher = Task { [weak self] in
             for await result in Transaction.updates {
-                guard let self, case .verified(let t) = result else { continue }
-                if t.productID == Larp.productID, t.revocationDate == nil { Larp.unlocked = true }
-                await t.finish()
-                self.objectWillChange.send()
+                guard let self, case .verified(let transaction) = result,
+                      transaction.productID == Self.productID else { continue }
+                await refresh()
+                await transaction.finish()
             }
         }
     }
-    deinit { updates?.cancel() }
 
-    var priceLine: String { product?.displayPrice ?? Larp.fallbackPrice }
+    deinit { watcher?.cancel() }
 
     func load() async {
-        guard product == nil else { return }
+        await refresh()
         do {
-            product = try await Product.products(for: [Larp.productID]).first
-            await refreshEntitlement()
-        } catch { message = nil }   // no store yet: the fallback price shows, the button waits
+            product = try await Product.products(for: [Self.productID]).first
+            if product == nil { message = "Preview collection. This pack isn’t available from the App Store yet." }
+        } catch {
+            message = "The App Store couldn’t load this collection. Try again later."
+        }
     }
 
-    func refreshEntitlement() async {
+    func refresh() async {
+        var entitled = false
         for await result in Transaction.currentEntitlements {
-            if case .verified(let t) = result, t.productID == Larp.productID, t.revocationDate == nil { Larp.unlocked = true }
+            guard case .verified(let transaction) = result,
+                  transaction.productID == Self.productID,
+                  transaction.revocationDate == nil,
+                  !transaction.isUpgraded,
+                  transaction.expirationDate == nil || transaction.expirationDate! > .now else { continue }
+            entitled = true
         }
-        objectWillChange.send()
+        owned = entitled
+        UserDefaults.standard.set(entitled, forKey: "seasonAfterDarkOwned")
     }
 
     func buy() async {
-        guard let product else { message = "Not on sale yet."; return }
-        busy = true; defer { busy = false }
+        guard !busy, let product else { return }
+        busy = true
+        defer { busy = false }
         do {
             switch try await product.purchase() {
             case .success(let verification):
-                if case .verified(let t) = verification { Larp.unlocked = true; await t.finish(); message = nil }
-                else { message = "That purchase couldn't be verified." }
-            case .userCancelled: message = nil
-            case .pending: message = "Waiting on approval."
-            @unknown default: message = nil
+                guard case .verified(let transaction) = verification else {
+                    message = "Purchase couldn’t be verified. No outfit has been unlocked."
+                    return
+                }
+                await refresh()
+                await transaction.finish()
+                message = owned ? "The collection is yours." : "Waiting for your purchase to appear. Try Restore purchases."
+            case .pending:
+                message = "Waiting for purchase approval."
+            case .userCancelled:
+                message = nil
+            @unknown default:
+                message = "Purchase didn’t complete. Try again."
             }
-        } catch { message = "The App Store didn't answer. Try again." }
-        objectWillChange.send()
+        } catch {
+            message = "Purchase didn’t complete. Try again."
+        }
     }
 
     func restore() async {
-        busy = true; defer { busy = false }
-        try? await AppStore.sync()
-        await refreshEntitlement()
-        message = Larp.unlocked ? "Restored." : "Nothing to restore on this Apple ID."
+        guard !busy else { return }
+        busy = true
+        defer { busy = false }
+        do {
+            try await AppStore.sync()
+            await refresh()
+            message = owned ? "Collection restored." : "No purchase of this collection on this Apple ID."
+        } catch {
+            message = "Restore couldn’t finish. Check your connection and try again."
+        }
     }
 }
 
-/// The ask. Half a screen. The user's own receipts, one number, one button, one honest way out.
-struct AskView: View {
-    @ObservedObject var store: ProofStore
+struct SeasonalCollectionView: View {
     @ObservedObject var prefs: Prefs
-    @StateObject private var shop = LarpStore()
+    @ObservedObject private var shop = SeasonalShop.shared
     @Environment(\.dismiss) private var dismiss
-
-    private var receipts: Int { store.logs.filter(\.isEligible).count }
-    private var work: Int { store.logs.filter { $0.quest == .work && $0.isEligible }.count }
-    private var levelLine: String {
-        switch work {
-        case 0: "Ship one thing. Then we'll talk about costumes."
-        case 1..<3: "First proof. That's rarer than you think."
-        case 3..<7: "Repeat offender. Keep going."
-        default: "Real enough. Dress the part."
-        }
-    }
-    private var days: Int {
-        guard let first = Larp.firstReceiptAt else { return 0 }
-        return max(1, (LarpyTime.cal.dateComponents([.day], from: first, to: .now).day ?? 0) + 1)
-    }
+    @State private var selection = "season-pumpkin"
+    private var look: FounderLook { FounderLook.find(selection)! }
 
     var body: some View {
-        VStack(spacing: 14) {
-            Capsule().fill(Palette.line).frame(width: 36, height: 4).padding(.top, 8)
-            HStack(spacing: 14) {
-                LarpyCharacterView(life: LifeEngine.life(store.logs), base: .cream,
-                                   kit: SceneWardrobe.kit(for: store.logsOn(.now), fallback: prefs.kit),
-                                   width: 64, showScene: false, level: work, founderID: store.logs.first?.founderID)
-                    .frame(width: 84, height: 96)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(Larp.unlocked ? "The wardrobe is yours." : "\(days) days. \(receipts) receipts.")
-                        .font(.system(size: 26, weight: .medium, design: .serif)).tracking(-0.6).foregroundStyle(Palette.text)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(levelLine).font(.system(size: 15, design: .serif)).foregroundStyle(Palette.muted)
-                }
-                Spacer(minLength: 0)
-            }
-            receiptStrip
-            Text("Logging, history, the week, the widget, the share card. Free, forever. The costume doesn't stay free.")
-                .font(.system(size: 13)).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            if Larp.unlocked {
-                Text("One payment. It never renews. Looks and rooms keep changing.")
-                    .font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.text)
-                Button("Done") { dismiss() }.font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.muted).buttonStyle(.plain)
-            } else if work == 0 {
-                Text("No price until the first Work receipt.").font(.system(size: 12, weight: .medium, design: .monospaced)).foregroundStyle(Palette.muted)
-                Button("Restore purchase") { Task { await shop.restore() } }.font(.system(size: 13)).foregroundStyle(Palette.muted).buttonStyle(.plain)
-            } else {
-                Button { Task { await shop.buy(); if Larp.unlocked { dismiss() } } } label: {
-                    HStack(spacing: 8) {
-                        if shop.busy { ProgressView().tint(Palette.ink) }
-                        Text("Keep the wardrobe · \(shop.priceLine) once")
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    Text("After dark.").font(.system(.largeTitle, design: .serif))
+                    Text("Same little menace. A different disguise.").font(.subheadline).foregroundStyle(Palette.muted)
+                    LarpyCharacterView(life: .neutral, base: .cream, kit: look.kit, width: 185, showScene: false, interactive: true, founderID: look.id, companion: true)
+                        .frame(height: 305)
+                    Text(look.styleName).font(.title2.weight(.semibold))
+                    HStack(spacing: 10) {
+                        ForEach(["season-pumpkin", "season-vampire", "season-wizard"], id: \.self) { id in
+                            let item = FounderLook.find(id)!
+                            Button { selection = id } label: {
+                                LarpyCharacterView(life: .neutral, base: .cream, kit: item.kit, width: 48, showScene: false, founderID: id)
+                                    .frame(maxWidth: .infinity).frame(height: 86)
+                                    .background(selection == id ? Palette.gold.opacity(0.25) : Palette.card, in: RoundedRectangle(cornerRadius: 14))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(item.styleName)
+                            .accessibilityAddTraits(selection == id ? .isSelected : [])
+                        }
                     }
-                    .font(.system(size: 17, weight: .semibold)).foregroundStyle(Palette.ink)
-                    .frame(maxWidth: .infinity, minHeight: 54).background(Palette.gold, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }.buttonStyle(.plain).disabled(shop.busy || shop.product == nil).opacity(shop.product == nil ? 0.55 : 1)
-                Text(shop.product == nil ? "Not on sale yet. Nothing is paused until it is." : "One payment. It never renews.")
-                    .font(.system(size: 12)).foregroundStyle(Palette.muted)
-                Button("Not now. Receipts still count.") { dismiss() }
-                    .font(.system(size: 14, weight: .medium)).foregroundStyle(Palette.text).buttonStyle(.plain).padding(.top, 2)
-                Button("Restore purchase") { Task { await shop.restore() } }
-                    .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1).foregroundStyle(Palette.muted).buttonStyle(.plain)
-                    .frame(minHeight: 44)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Link("Terms of Use (EULA)", destination: LarpyLinks.terms).frame(minHeight: 44)
+                        Link("Privacy policy", destination: LarpyLinks.privacy).frame(minHeight: 44)
+                    }.font(.subheadline).tint(Palette.text)
+                    if shop.owned {
+                        Button("Wear \(look.styleName)") { prefs.selectedLookID = selection; dismiss() }
+                            .buttonStyle(.borderedProminent).tint(Palette.gold).foregroundStyle(Palette.ink)
+                    } else if let product = shop.product {
+                        Text(product.displayName).font(.headline)
+                        Button("All 3 outfits · \(product.displayPrice)") { Task { await shop.buy() } }
+                            .buttonStyle(.borderedProminent).tint(Palette.gold).foregroundStyle(Palette.ink).disabled(shop.busy)
+                        Text("One purchase. No subscription.").font(.caption)
+                    }
+                    if let message = shop.message {
+                        Text(message).font(.subheadline).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                    }
+                    Text("Optional costumes only. Your progress, daily activities and achievement skins stay free. These outfits never count as achievements.")
+                        .font(.footnote).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                    Button("Restore purchases") { Task { await shop.restore() } }
+                        .frame(minHeight: 44).disabled(shop.busy)
+                    if shop.busy { ProgressView() }
+                }
+                .padding(24).frame(maxWidth: 480).frame(maxWidth: .infinity)
             }
-            if let m = shop.message { Text(m).font(.system(size: 12)).foregroundStyle(Palette.muted) }
+            .background(Palette.bg).foregroundStyle(Palette.text)
+            .navigationTitle("Seasonal collection").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .task { await shop.load() }
         }
-        .padding(.horizontal, 24).padding(.bottom, 16)
-        .frame(maxWidth: .infinity)
-        .background(Palette.bg.ignoresSafeArea())
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.hidden)
-        .task { await shop.load() }
-    }
-
-    /// The person's own receipts, most recent first. Not stat tiles.
-    private var receiptStrip: some View {
-        let recent = Array(store.logs.filter(\.isEligible).prefix(14))
-        return HStack(spacing: 4) {
-            ForEach(recent) { log in
-                RoundedRectangle(cornerRadius: 2).fill(log.quest == .work ? Palette.gold : log.quest.tint.opacity(0.55))
-                    .frame(width: 14, height: 6)
-            }
-            if recent.isEmpty { Rectangle().fill(Palette.line).frame(height: 1) }
-            Spacer(minLength: 0)
-        }.frame(height: 8).accessibilityLabel("\(recent.count) recent receipts")
     }
 }

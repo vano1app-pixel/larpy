@@ -1,3 +1,55 @@
+# Current addition — Larpy Plus, 6 October 2026
+
+Ayush requested a one-month free trial followed by 2 per week. This supersedes the old one-time-only purchase direction. Preserve the charcoal, cream companion, native type and gold action colour. Keep logging, every focus timer, app blocking, timed breaks, saved proof, reflections and earned looks free. Plus covers local week-over-week activity comparisons and next-step suggestions. Apple Guideline 4.10 prohibits monetizing Screen Time APIs; no focus or Screen Time feature may depend on Plus.
+
+Hide an empty Mac token counter until a usage source is connected. Today gives the companion room and keeps the three proof actions visible. The paywall names the actual features, uses StoreKit's title, billing period, price and eligible trial, and places working EULA/privacy links above purchase. Restore and cancellation remain discoverable. Never use a locally timed trial or fabricated entitlement. Expiry must not prevent ending an existing focus session or accessing saved activities.
+
+[Implementation, rendered checks and remaining release gates](PAYMENTS-2026-10-06.md). Older release and pricing statements below are historical where they conflict.
+
+## Current direction — 1 October 2026: dark focus by default
+
+Dark charcoal is now the app default; preserve an explicit Light choice. The cream Larpy remains the brightest visual anchor. Put the protected-focus entry directly above the proof buttons. Setup recommends TikTok, Instagram and Snapchat, but Apple requires one-time Screen Time consent and manual app selection. Never label these apps as selected without user-selected tokens.
+
+After setup, Today starts protected focus in one tap using the saved duration and remembered next step, with an optional generic plan if none was named. Blocking is the main path. A separate, explicit timer-only option must say that apps remain available and use a timer icon.
+
+The dark Larpy shield offers Back to focus or Ask Larpy for a break. Returning to Larpy opens a reason + 5/10/15-minute request. Schedule background re-blocking before allowing access, bound breaks to the parent session, deduct break time from recorded focus, and retain an explicit cancel-session escape. All selected distractions become available during a break; explain this scope and that the clock starts immediately. iOS 26.5+ supports opening Larpy from the shield; earlier versions need a manual return.
+
+## Current direction — 1 October 2026: a companion that remembers
+
+Larpy stays the main character. Add personal recognition from saved evidence, a gentle welcome after a gap, and one remembered next step that carries into focus. Competition is secondary to that relationship: a dedicated Larp area holds the friends board; Today keeps the character and the three proof actions prominent.
+
+Lifetime levels start at 1 and advance every 100 XP. Work earns 30 XP per qualifying day; Body and Learnt earn 10 each. Extra logs cannot farm XP. Rest does not subtract XP. Existing day-based skin requirements remain intact. Weekly friend scores compare matching Monday–Sunday windows; lifetime levels show accumulated consistency. Never describe either as measured hours or objective work quality. Friends currently exchange dated files, not live authenticated scores; show this in the interface.
+
+The next-step note is local, optional and editable. No fake friend activity, guilt, threats to the character, invented urgency or automated messages. Give people a useful reason to return: Larpy remembers the small thing they chose to do next.
+
+# Current addition — focus and proof, 1 October 2026
+
+Home keeps the large companion and exposes Body / Work / Learnt directly; there is no extra activity chooser. Voice edits a draft. Work still needs a link or screenshot; focus minutes are a separate timer measure. A named focus block can shield user-selected distractions through Apple's Screen Time APIs. The shield is Larpy's annoyed face and the chosen task, with a clear way back and an early stop in the app.
+
+Home and Lock Screen widgets show recorded activity, a missing-proof reminder and local focus time. Say “No movement logged today,” never claim to know someone skipped the gym. They do not promise continuous pet animation or instant system refresh. See FOCUS-AND-WIDGETS-2026-10-01.md for the implementation and the physical-device/release gates.
+
+# Current direction — living companion, 30 September 2026
+
+Larpy is a pet you build a life with: large, original egg; warm paper and ink; one gold accent; visibly moving rather than trapped in a card. Today / Days / Skins. A tap brings a greeting; walking, blinking and waving stop for Reduce Motion or backgrounding. Buddy is the default; Coach and opt-in Little menace change tone without inventing facts or attacking the person.
+
+Days is a scrapbook of dated outfit stamps, newest first, with honest missed days and cumulative progress. Calendar events are plans, never earned activity. Users confirm new focus blocks in Apple's event editor. All calendar information stays on the device.
+
+Achievement outfits are free and earned at 10 / 25 / 50 / 100 days per lane. Social milestones require explicitly self-reported screenshot evidence in this build. Seasonal costumes are a separate optional StoreKit non-consumable; no countdown, no fabricated price and no bypass of earned skins. The three after-dark outfits are previews until an App Store product is configured.
+
+Friend comparison uses explicitly shared, dated files and separate sources/windows, with unknown values shown as a dash. Never fabricate friends, rankings, audience growth or token counts. Usage is not quality. Trading goals reward journals and learning, not profit or risk-taking.
+
+The Mac companion is a floating original pet with focus timer, optional local app-name nudges and a simple local-agent sync folder picker. Monitoring starts off, has no screen/content capture and runs only during an active focus block. iPhone overlay promises are forbidden; Screen Time requires Apple's entitlement and a signed-device implementation.
+
+See COMPLETION-2026-09-30.md and QA/2026-09-30-living/REVIEW.md for evidence and open release requirements. Everything below is historical where it conflicts.
+
+---
+
+# Current direction — 30 September 2026
+
+Ayush requested career setup, progression-locked skins, follower rewards for LinkedIn / Instagram / X and a simpler app. This supersedes the older exclusions of onboarding and follower tracking below. Today has three clear actions, Progress has lifetime totals, and Skins shows exact requirements. Preserve the original egg, warm surfaces and native type; platform skins are original, without endorsement claims. See COMPLETION-2026-09-30.md.
+
+## Previous design notes — historical
+
 # Larpy design direction
 
 ## The direction

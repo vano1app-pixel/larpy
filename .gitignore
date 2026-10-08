@@ -10,3 +10,9 @@ xcuserdata/
 
 # macOS
 .DS_Store
+__pycache__/
+*.pyc
+
+# Local companion application output
+Companion/Mac/build/
+QA/StoreKit/LarpyPaymentQA.xcodeproj/

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "id": "CA3F90D9-B8F3-4F44-A73D-BB32C385B769",
+  "name": "QA Alex (sample)",
+  "generatedAt": 812568782.351032,
+  "timeZoneID": "Europe/Dublin",
+  "weekStart": "2026-09-28",
+  "weekEnd": "2026-10-04",
+  "lifetimeDays": {
+    "Body": 18,
+    "Learn": 18,
+    "Work": 18
+  },
+  "weekDays": {
+    "Body": 2,
+    "Learn": 1,
+    "Work": 4
+  }
+}

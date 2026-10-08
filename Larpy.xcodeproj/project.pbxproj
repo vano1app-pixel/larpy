@@ -7,6 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		ABCD20261006000000000001 /* LarpyPlus.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261006000000000002; };
+		ABCD20261006000000000003 /* WeeklyReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261006000000000004; };
+		ABCD20261005000000000002 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ABCD20261005000000000001 /* Assets.xcassets */; };
+		ABCD20261003000000000001 /* FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000130; };
+		ABCD20261002000000000003 /* LarpArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261002000000000004; };
+		ABCD20261002000000000001 /* Leveling.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261002000000000002; };
+		ABCD20260930000000000013 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = ABCD20260930000000000010; };
+		ABCD20260930000000000012 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = ABCD20260930000000000010; };
+		ABCD20260930000000000011 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = ABCD20260930000000000010; };
+		ABCD20260931000000000001 /* JourneyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20260931000000000002; };
+		ABCD20260930000000000001 /* Progression.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20260930000000000002; };
+		ABCD20260907000000000001 /* Connections.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20260907000000000002; };
 		1B66D8F72C9B4E4C9C3A0011 /* LarpyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B66D8F62C9B4E4C9C3A0011 /* LarpyApp.swift */; };
 		1B66D8F92C9B4E4C9C3A0011 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B66D8F82C9B4E4C9C3A0011 /* ContentView.swift */; };
 		1B66D8FB2C9B4E4C9C3A0011 /* ProofLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B66D8FA2C9B4E4C9C3A0011 /* ProofLog.swift */; };
@@ -23,9 +35,38 @@
 		1B66E0B000000000C3A00006 /* LarpyRollneck@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B66E0A000000000C3A00006 /* LarpyRollneck@3x.png */; };
 		ABCD20260905000000000001 /* FounderWardrobe.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20260905000000000002; };
 		ABCD20260906000000000001 /* Larp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20260906000000000002; };
+		1B66F20000000000C3A00004 /* FocusMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B66F20000000000C3A00002 /* FocusMonitor.swift */; };
+		1B66F20000000000C3A00005 /* LarpyFocusMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1B66F20000000000C3A00001 /* LarpyFocusMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		ABCD20261001000000000023 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = ABCD20260930000000000010; };
+		1B66F30000000000C3A00004 /* FocusShield.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B66F30000000000C3A00002 /* FocusShield.swift */; };
+		1B66F30000000000C3A00005 /* LarpyFocusShieldExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1B66F30000000000C3A00001 /* LarpyFocusShieldExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		ABCD20261001000000000033 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = ABCD20260930000000000010; };
+		1B66F40000000000C3A00004 /* FocusAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B66F40000000000C3A00002 /* FocusAction.swift */; };
+		1B66F40000000000C3A00005 /* LarpyFocusActionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1B66F40000000000C3A00001 /* LarpyFocusActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		ABCD20261001000000000043 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = ABCD20260930000000000010; };
+		ABCD20261001000000000111 /* FocusMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000110; };
+		ABCD20261001000000000121 /* VoiceNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000120; };
+		ABCD20261001000000000131 /* FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000130; };
+		ABCD20261001000000000221 /* FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000130; };
+		ABCD20261001000000000231 /* FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000130; };
+		ABCD20261001000000000251 /* FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000130; };
+		ABCD20261001000000000311 /* WidgetGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000310; };
+		ABCD20261001000000000441 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000440; };
+		ABCD20261001000000000442 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000440; };
+		ABCD20261001000000000451 /* WidgetArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000450; };
+		ABCD20261001000000000452 /* WidgetArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20261001000000000450; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		ABCD20261006000000000002 /* LarpyPlus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LarpyPlus.swift; sourceTree = "<group>"; };
+		ABCD20261006000000000004 /* WeeklyReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReview.swift; sourceTree = "<group>"; };
+		ABCD20261005000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		ABCD20261002000000000004 /* LarpArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LarpArea.swift; sourceTree = "<group>"; };
+		ABCD20261002000000000002 /* Leveling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Leveling.swift; sourceTree = "<group>"; };
+		ABCD20260930000000000010 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		ABCD20260931000000000002 /* JourneyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyViews.swift; sourceTree = "<group>"; };
+		ABCD20260930000000000002 /* Progression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progression.swift; sourceTree = "<group>"; };
+		ABCD20260907000000000002 /* Connections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Connections.swift; sourceTree = "<group>"; };
 		1B66D8EF2C9B4E4C9C3A0011 /* Larpy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Larpy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1B66D8F62C9B4E4C9C3A0011 /* LarpyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LarpyApp.swift; sourceTree = "<group>"; };
 		1B66D8F82C9B4E4C9C3A0011 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -49,6 +90,24 @@
 		1B66E0A000000000C3A00006 /* LarpyRollneck@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "LarpyRollneck@3x.png"; path = "AppIcons/LarpyRollneck@3x.png"; sourceTree = "<group>"; };
 		ABCD20260905000000000002 /* FounderWardrobe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FounderWardrobe.swift; sourceTree = "<group>"; };
 		ABCD20260906000000000002 /* Larp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Larp.swift; sourceTree = "<group>"; };
+		1B66F20000000000C3A00001 /* LarpyFocusMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LarpyFocusMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1B66F20000000000C3A00002 /* FocusMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusMonitor.swift; sourceTree = "<group>"; };
+		1B66F20000000000C3A00003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1B66F20000000000C3A00011 /* LarpyFocusMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LarpyFocusMonitor.entitlements; sourceTree = "<group>"; };
+		1B66F30000000000C3A00001 /* LarpyFocusShieldExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LarpyFocusShieldExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1B66F30000000000C3A00002 /* FocusShield.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusShield.swift; sourceTree = "<group>"; };
+		1B66F30000000000C3A00003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1B66F30000000000C3A00011 /* LarpyFocusShield.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LarpyFocusShield.entitlements; sourceTree = "<group>"; };
+		1B66F40000000000C3A00001 /* LarpyFocusActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LarpyFocusActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1B66F40000000000C3A00002 /* FocusAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusAction.swift; sourceTree = "<group>"; };
+		1B66F40000000000C3A00003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1B66F40000000000C3A00011 /* LarpyFocusAction.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LarpyFocusAction.entitlements; sourceTree = "<group>"; };
+		ABCD20261001000000000110 /* FocusMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FocusMode.swift; path = "FocusMode.swift"; sourceTree = "<group>"; };
+		ABCD20261001000000000120 /* VoiceNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceNote.swift; path = "VoiceNote.swift"; sourceTree = "<group>"; };
+		ABCD20261001000000000130 /* FocusSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FocusSession.swift; path = "../Shared/FocusSession.swift"; sourceTree = "<group>"; };
+		ABCD20261001000000000310 /* WidgetGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetGuide.swift; sourceTree = "<group>"; };
+		ABCD20261001000000000440 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WidgetSnapshot.swift; path = "../Shared/WidgetSnapshot.swift"; sourceTree = "<group>"; };
+		ABCD20261001000000000450 /* WidgetArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WidgetArtwork.swift; path = "../Shared/WidgetArtwork.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +125,27 @@
 			remoteGlobalIDString = 1B66F10000000000C3A0000A;
 			remoteInfo = LarpyShareExtension;
 		};
+		1B66F20000000000C3A0000F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1B66D8E72C9B4E4C9C3A0011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1B66F20000000000C3A0000A;
+			remoteInfo = LarpyFocusMonitorExtension;
+		};
+		1B66F30000000000C3A0000F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1B66D8E72C9B4E4C9C3A0011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1B66F30000000000C3A0000A;
+			remoteInfo = LarpyFocusShieldExtension;
+		};
+		1B66F40000000000C3A0000F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1B66D8E72C9B4E4C9C3A0011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1B66F40000000000C3A0000A;
+			remoteInfo = LarpyFocusActionExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -77,6 +157,9 @@
 			files = (
 				1B66F00000000000C3A00005 /* LarpyWidgetExtension.appex in Embed Foundation Extensions */,
 				1B66F10000000000C3A00005 /* LarpyShareExtension.appex in Embed Foundation Extensions */,
+				1B66F40000000000C3A00005 /* LarpyFocusActionExtension.appex in Embed Foundation Extensions */,
+				1B66F30000000000C3A00005 /* LarpyFocusShieldExtension.appex in Embed Foundation Extensions */,
+				1B66F20000000000C3A00005 /* LarpyFocusMonitorExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -105,6 +188,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1B66F20000000000C3A00008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B66F30000000000C3A00008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B66F40000000000C3A00008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -114,6 +218,9 @@
 				1B66D8F02C9B4E4C9C3A0011 /* Larpy */,
 				1B66F00000000000C3A00006 /* LarpyWidget */,
 				1B66F10000000000C3A00006 /* LarpyShare */,
+				1B66F40000000000C3A00006 /* LarpyFocusAction */,
+				1B66F30000000000C3A00006 /* LarpyFocusShield */,
+				1B66F20000000000C3A00006 /* LarpyFocusMonitor */,
 				1B66D8EE2C9B4E4C9C3A0011 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -124,6 +231,9 @@
 				1B66D8EF2C9B4E4C9C3A0011 /* Larpy.app */,
 				1B66F00000000000C3A00001 /* LarpyWidgetExtension.appex */,
 				1B66F10000000000C3A00001 /* LarpyShareExtension.appex */,
+				1B66F40000000000C3A00001 /* LarpyFocusActionExtension.appex */,
+				1B66F30000000000C3A00001 /* LarpyFocusShieldExtension.appex */,
+				1B66F20000000000C3A00001 /* LarpyFocusMonitorExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -131,10 +241,25 @@
 		1B66D8F02C9B4E4C9C3A0011 /* Larpy */ = {
 			isa = PBXGroup;
 			children = (
+				ABCD20261005000000000001 /* Assets.xcassets */,
 				1B66D8F62C9B4E4C9C3A0011 /* LarpyApp.swift */,
 				1B66D8F82C9B4E4C9C3A0011 /* ContentView.swift */,
 				ABCD20260905000000000002 /* FounderWardrobe.swift */,
 				ABCD20260906000000000002 /* Larp.swift */,
+				ABCD20261006000000000002 /* LarpyPlus.swift */,
+				ABCD20261006000000000004 /* WeeklyReview.swift */,
+				ABCD20260907000000000002 /* Connections.swift */,
+				ABCD20260930000000000010 /* PrivacyInfo.xcprivacy */,
+				ABCD20261001000000000110 /* FocusMode.swift */,
+				ABCD20261001000000000120 /* VoiceNote.swift */,
+				ABCD20261001000000000130 /* FocusSession.swift */,
+				ABCD20261001000000000310 /* WidgetGuide.swift */,
+				ABCD20261001000000000440 /* WidgetSnapshot.swift */,
+				ABCD20261001000000000450 /* WidgetArtwork.swift */,
+				ABCD20261002000000000002 /* Leveling.swift */,
+				ABCD20261002000000000004 /* LarpArea.swift */,
+				ABCD20260931000000000002 /* JourneyViews.swift */,
+				ABCD20260930000000000002 /* Progression.swift */,
 				1B66D8F12C9B4E4C9C3A0011 /* Models */,
 				1B66D8F22C9B4E4C9C3A0011 /* Services */,
 				1B66E0C000000000C3A00001 /* AppIcons */,
@@ -193,6 +318,36 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		1B66F20000000000C3A00006 /* LarpyFocusMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				1B66F20000000000C3A00002 /* FocusMonitor.swift */,
+				1B66F20000000000C3A00003 /* Info.plist */,
+				1B66F20000000000C3A00011 /* LarpyFocusMonitor.entitlements */,
+			);
+			path = LarpyFocusMonitor;
+			sourceTree = "<group>";
+		};
+		1B66F30000000000C3A00006 /* LarpyFocusShield */ = {
+			isa = PBXGroup;
+			children = (
+				1B66F30000000000C3A00002 /* FocusShield.swift */,
+				1B66F30000000000C3A00003 /* Info.plist */,
+				1B66F30000000000C3A00011 /* LarpyFocusShield.entitlements */,
+			);
+			path = LarpyFocusShield;
+			sourceTree = "<group>";
+		};
+		1B66F40000000000C3A00006 /* LarpyFocusAction */ = {
+			isa = PBXGroup;
+			children = (
+				1B66F40000000000C3A00002 /* FocusAction.swift */,
+				1B66F40000000000C3A00003 /* Info.plist */,
+				1B66F40000000000C3A00011 /* LarpyFocusAction.entitlements */,
+			);
+			path = LarpyFocusAction;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -210,6 +365,9 @@
 			dependencies = (
 				1B66F00000000000C3A00010 /* PBXTargetDependency */,
 				1B66F10000000000C3A00010 /* PBXTargetDependency */,
+				1B66F40000000000C3A00010 /* PBXTargetDependency */,
+				1B66F30000000000C3A00010 /* PBXTargetDependency */,
+				1B66F20000000000C3A00010 /* PBXTargetDependency */,
 			);
 			name = Larpy;
 			productName = Larpy;
@@ -250,6 +408,57 @@
 			productReference = 1B66F10000000000C3A00001 /* LarpyShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		1B66F20000000000C3A0000A /* LarpyFocusMonitorExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1B66F20000000000C3A0000B /* Build configuration list for PBXNativeTarget "LarpyFocusMonitorExtension" */;
+			buildPhases = (
+				1B66F20000000000C3A00007 /* Sources */,
+				1B66F20000000000C3A00008 /* Frameworks */,
+				1B66F20000000000C3A00009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LarpyFocusMonitorExtension;
+			productName = LarpyFocusMonitorExtension;
+			productReference = 1B66F20000000000C3A00001 /* LarpyFocusMonitorExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		1B66F30000000000C3A0000A /* LarpyFocusShieldExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1B66F30000000000C3A0000B /* Build configuration list for PBXNativeTarget "LarpyFocusShieldExtension" */;
+			buildPhases = (
+				1B66F30000000000C3A00007 /* Sources */,
+				1B66F30000000000C3A00008 /* Frameworks */,
+				1B66F30000000000C3A00009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LarpyFocusShieldExtension;
+			productName = LarpyFocusShieldExtension;
+			productReference = 1B66F30000000000C3A00001 /* LarpyFocusShieldExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		1B66F40000000000C3A0000A /* LarpyFocusActionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1B66F40000000000C3A0000B /* Build configuration list for PBXNativeTarget "LarpyFocusActionExtension" */;
+			buildPhases = (
+				1B66F40000000000C3A00007 /* Sources */,
+				1B66F40000000000C3A00008 /* Frameworks */,
+				1B66F40000000000C3A00009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LarpyFocusActionExtension;
+			productName = LarpyFocusActionExtension;
+			productReference = 1B66F40000000000C3A00001 /* LarpyFocusActionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -287,6 +496,9 @@
 				1B66D8ED2C9B4E4C9C3A0011 /* Larpy */,
 				1B66F00000000000C3A0000A /* LarpyWidgetExtension */,
 				1B66F10000000000C3A0000A /* LarpyShareExtension */,
+				1B66F40000000000C3A0000A /* LarpyFocusActionExtension */,
+				1B66F30000000000C3A0000A /* LarpyFocusShieldExtension */,
+				1B66F20000000000C3A0000A /* LarpyFocusMonitorExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -296,6 +508,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABCD20261005000000000002 /* Assets.xcassets in Resources */,
+				ABCD20260930000000000011 /* PrivacyInfo.xcprivacy in Resources */,
 				1B66E0B000000000C3A00001 /* LarpyPrimary@2x.png in Resources */,
 				1B66E0B000000000C3A00002 /* LarpyPrimary@3x.png in Resources */,
 				1B66E0B000000000C3A00003 /* LarpyHungry@2x.png in Resources */,
@@ -309,6 +523,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABCD20260930000000000012 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -316,6 +531,31 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABCD20260930000000000013 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B66F20000000000C3A00009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ABCD20261001000000000023 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B66F30000000000C3A00009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ABCD20261001000000000033 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B66F40000000000C3A00009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ABCD20261001000000000043 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,6 +570,19 @@
 				1B66D8F92C9B4E4C9C3A0011 /* ContentView.swift in Sources */,
 				ABCD20260905000000000001 /* FounderWardrobe.swift in Sources */,
 				ABCD20260906000000000001 /* Larp.swift in Sources */,
+				ABCD20261006000000000001 /* LarpyPlus.swift in Sources */,
+				ABCD20261006000000000003 /* WeeklyReview.swift in Sources */,
+				ABCD20260907000000000001 /* Connections.swift in Sources */,
+				ABCD20261001000000000111 /* FocusMode.swift in Sources */,
+				ABCD20261001000000000121 /* VoiceNote.swift in Sources */,
+				ABCD20261001000000000131 /* FocusSession.swift in Sources */,
+				ABCD20261001000000000311 /* WidgetGuide.swift in Sources */,
+				ABCD20261002000000000001 /* Leveling.swift in Sources */,
+				ABCD20261002000000000003 /* LarpArea.swift in Sources */,
+				ABCD20260931000000000001 /* JourneyViews.swift in Sources */,
+				ABCD20261001000000000451 /* WidgetArtwork.swift in Sources */,
+				ABCD20261001000000000441 /* WidgetSnapshot.swift in Sources */,
+				ABCD20260930000000000001 /* Progression.swift in Sources */,
 				1B66D8FB2C9B4E4C9C3A0011 /* ProofLog.swift in Sources */,
 				1B66D8FD2C9B4E4C9C3A0011 /* ProofStore.swift in Sources */,
 			);
@@ -340,6 +593,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				1B66F00000000000C3A00004 /* LarpyWidget.swift in Sources */,
+				ABCD20261001000000000452 /* WidgetArtwork.swift in Sources */,
+				ABCD20261001000000000442 /* WidgetSnapshot.swift in Sources */,
+				ABCD20261001000000000251 /* FocusSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -348,6 +604,33 @@
 			buildActionMask = 2147483647;
 			files = (
 				1B66F10000000000C3A00004 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B66F20000000000C3A00007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1B66F20000000000C3A00004 /* FocusMonitor.swift in Sources */,
+				ABCD20261001000000000221 /* FocusSession.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B66F30000000000C3A00007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1B66F30000000000C3A00004 /* FocusShield.swift in Sources */,
+				ABCD20261001000000000231 /* FocusSession.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B66F40000000000C3A00007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1B66F40000000000C3A00004 /* FocusAction.swift in Sources */,
+				ABCD20261003000000000001 /* FocusSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -363,6 +646,21 @@
 			isa = PBXTargetDependency;
 			target = 1B66F10000000000C3A0000A /* LarpyShareExtension */;
 			targetProxy = 1B66F10000000000C3A0000F /* PBXContainerItemProxy */;
+		};
+		1B66F20000000000C3A00010 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1B66F20000000000C3A0000A /* LarpyFocusMonitorExtension */;
+			targetProxy = 1B66F20000000000C3A0000F /* PBXContainerItemProxy */;
+		};
+		1B66F30000000000C3A00010 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1B66F30000000000C3A0000A /* LarpyFocusShieldExtension */;
+			targetProxy = 1B66F30000000000C3A0000F /* PBXContainerItemProxy */;
+		};
+		1B66F40000000000C3A00010 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1B66F40000000000C3A0000A /* LarpyFocusActionExtension */;
+			targetProxy = 1B66F40000000000C3A0000F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -485,11 +783,12 @@
 		1B66D9042C9B4E4C9C3A0011 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Larpy/Larpy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Larpy/Info.plist;
@@ -505,7 +804,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.larpy.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -516,11 +815,12 @@
 		1B66D9052C9B4E4C9C3A0011 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Larpy/Larpy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Larpy/Info.plist;
@@ -536,7 +836,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.larpy.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -549,8 +849,8 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LarpyWidget/LarpyWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Larpy;
@@ -562,7 +862,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.larpy.app.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -576,8 +876,8 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LarpyWidget/LarpyWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Larpy;
@@ -589,7 +889,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.larpy.app.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -603,11 +903,11 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LarpyShare/LarpyShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyShare/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Load in Larpy";
+				INFOPLIST_KEY_CFBundleDisplayName = "Larpy";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -616,7 +916,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.larpy.app.share;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -630,11 +930,11 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LarpyShare/LarpyShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyShare/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Load in Larpy";
+				INFOPLIST_KEY_CFBundleDisplayName = "Larpy";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -643,7 +943,175 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.larpy.app.share;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1B66F20000000000C3A0000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LarpyFocusMonitor/LarpyFocusMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LarpyFocusMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Larpy";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.focus-monitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1B66F20000000000C3A0000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LarpyFocusMonitor/LarpyFocusMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LarpyFocusMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Larpy";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.focus-monitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1B66F30000000000C3A0000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LarpyFocusShield/LarpyFocusShield.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LarpyFocusShield/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Larpy";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.focus-shield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1B66F30000000000C3A0000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LarpyFocusShield/LarpyFocusShield.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LarpyFocusShield/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Larpy";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.focus-shield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1B66F40000000000C3A0000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LarpyFocusAction/LarpyFocusAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LarpyFocusAction/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Larpy";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.focus-action;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1B66F40000000000C3A0000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LarpyFocusAction/LarpyFocusAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = 36RZ9VDHBC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LarpyFocusAction/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Larpy";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vano.larpy.focus-action;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -687,6 +1155,33 @@
 			buildConfigurations = (
 				1B66F10000000000C3A0000C /* Debug */,
 				1B66F10000000000C3A0000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1B66F20000000000C3A0000B /* Build configuration list for PBXNativeTarget "LarpyFocusMonitorExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1B66F20000000000C3A0000C /* Debug */,
+				1B66F20000000000C3A0000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1B66F30000000000C3A0000B /* Build configuration list for PBXNativeTarget "LarpyFocusShieldExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1B66F30000000000C3A0000C /* Debug */,
+				1B66F30000000000C3A0000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1B66F40000000000C3A0000B /* Build configuration list for PBXNativeTarget "LarpyFocusActionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1B66F40000000000C3A0000C /* Debug */,
+				1B66F40000000000C3A0000D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

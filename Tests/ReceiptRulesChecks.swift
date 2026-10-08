@@ -29,4 +29,14 @@ check(copy == new && copy.annotation == new.annotation, "Receipt retains source 
 for (count, expected) in [(999, 0), (1_000, 1_000), (9_999, 1_000), (10_000, 10_000), (100_000, 100_000)] {
     check(FollowerAchievement(count: count, photoFilename: "qa.jpg", at: .now).threshold == expected, "Follower threshold \(count)")
 }
+let usageID = UUID()
+let usage = UsageDay(id: usageID, source: "codex", at: .now, tokens: 1000)
+check(usage.valid(), "Supported positive daily usage accepted")
+check(!UsageDay(id: usageID, source: "unknown", at: .now, tokens: 1000).valid(), "Unknown usage source not mislabeled")
+check(!UsageDay(id: usageID, source: "codex", at: .now, tokens: -1).valid(), "Negative usage rejected")
+check(!UsageDay(id: usageID, source: "codex", at: Date().addingTimeInterval(3600), tokens: 1).valid(), "Future usage rejected")
+let imported = ProofLog(quest: .learn, proofKind: .number, value: "1000 tok", source: "codex")
+check(imported.quest == .learn && imported.isEligible, "Imported agent usage stays in Learnt")
+let importedCopy = try JSONDecoder().decode(ProofLog.self, from: JSONEncoder().encode(imported))
+check(importedCopy.source == "codex", "Imported provenance survives save")
 print("PASS: \(checked) receipt gates and compatibility checks")

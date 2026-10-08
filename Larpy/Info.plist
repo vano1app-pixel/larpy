@@ -2,28 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleURLTypes</key>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.larpy.app</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>larpy</string>
-			</array>
-		</dict>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>CFBundleIcons</key>
 	<dict>
-		<key>CFBundlePrimaryIcon</key>
-		<dict>
-			<key>CFBundleIconFiles</key>
-			<array>
-				<string>LarpyPrimary</string>
-			</array>
-			<key>UIPrerenderedIcon</key>
-			<false/>
-		</dict>
 		<key>CFBundleAlternateIcons</key>
 		<dict>
 			<key>LarpyHungry</key>
@@ -45,6 +34,40 @@
 				<false/>
 			</dict>
 		</dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>LarpyPrimary</string>
+			</array>
+			<key>UIPrerenderedIcon</key>
+			<false/>
+		</dict>
 	</dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.vano.larpy</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>larpy</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Show your upcoming calendar plans inside Larpy. Events stay on this device and never count as completed activities. Larpy does not edit existing events.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Larpy reads completed workouts to automatically log Gym and movement. No heart rate, weight, or medical records are requested.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Larpy only reads workouts you choose to share for Body progress and does not save or change Health data.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Dictate a proof note when you tap Say it instead. Audio is transcribed on this device and is not saved.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Turn your spoken activity note into editable text on this device. Review it before saving; voice alone does not verify Work or Body.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
 </dict>
 </plist>

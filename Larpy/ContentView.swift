@@ -12,8 +12,8 @@ import FoundationModels
 
 // MARK: - Palette
 
-/// Default is light cream paper. Dark is Settings → Appearance.
-enum Theme { static var isDark = false }
+/// Dark by default; an explicit Appearance choice is preserved.
+enum Theme { static var isDark = true }
 
 enum Palette {
     static var isDark: Bool { Theme.isDark }
@@ -92,7 +92,7 @@ struct LifeState {
 
     static let sofaPreview = LifeState(
         face: .asleep, gear: .none, posture: .sofa,
-        bodyTone: 1, growScale: 1, bubble: "i should be grinding", label: "asleep", cleared: false
+        bodyTone: 1, growScale: 1, bubble: "ready when you are", label: "asleep", cleared: false
     )
 
     static let neutralAsleep = LifeState(
@@ -175,7 +175,7 @@ func weekdayName(_ d: Date) -> String {
 
 enum LifeEngine {
     static func laneDone(_ logs: [ProofLog], _ quest: QuestKind, on day: Date) -> Bool {
-        logs.contains { $0.quest == quest && $0.isEligible && LarpyTime.cal.isDate($0.createdAt, inSameDayAs: day) }
+        logs.contains { $0.quest == quest && ProgressRules.countsForDay($0) && ($0.progressDay ?? LarpyTime.dayKey($0.createdAt)) == LarpyTime.dayKey(day) }
     }
 
     static func anyDone(_ logs: [ProofLog], on day: Date) -> Bool {
@@ -281,8 +281,8 @@ enum LifeEngine {
         let cal = LarpyTime.cal
 
         let face: Face = switch s.todayCount {
-        case 0: .asleep
-        case 1: .stirring
+        case 0: .stirring
+        case 1: .fed
         case 2: .fed
         default: .cleared
         }
@@ -300,7 +300,7 @@ enum LifeEngine {
             posture = .upright
         } else if s.emptyStreak >= 2 || (s.todayCount == 0 && after2130) {
             posture = .sofa
-            bubble = rotate(["i should be grinding", "this is the sofa era", "open the gym"], now: now)
+            bubble = rotate(["one small thing", "glad you’re here", "ready when you are"], now: now)
         } else if s.todayCount <= 1 && s.emptyStreak == 1 {
             posture = .stressed
             bubble = rotate(["still time", "one thing"], now: now)
@@ -330,47 +330,14 @@ enum LifeEngine {
 // MARK: - Voice (a pissed mentor; speaks only from receipts we actually have)
 
 enum Voice {
-    static let bank: [String] = [
-        "Ship something or you're larping.",
-        "Tokens aren't a product.",
-        "Did you wake up from the dream.",
-        "I don't see a ship.",
-        "Gym's still empty.",
-        "Are you building.",
-        "That's homework.",
-        "Close something.",
-        "You watched Hormozi. Cool. What shipped.",
-        "Founders don't get a participation check.",
-        "Are you building or decorating the LARP.",
-        "That's homework. Where's the thing.",
-        "Receipts or it didn't happen.",
-        "Nobody's impressed by the tab count.",
-        "The demo is the pitch. Where is it.",
-        "Cursor's open. Is anything leaving it.",
-        "One rep. One page. One ship. Pick.",
-        "Talk less about the plan.",
-        "Your future self wants a screenshot, not a vibe.",
-        "Ship ugly. Fix loud.",
-        "A clip isn't a course. A course isn't a company.",
-        "Still larping? Prove me wrong.",
-        "Solo LARP is just a diary."
-    ]
+    static let bank: [String] = ["One small thing at a time.", "Ready when you are.", "A little progress looks good on you."]
 
-    /// Time-aware, never surveillance-aware: only what today's receipts say.
-    /// `friendShipped` = the one friend's name when we HAVE their Ship receipt for today (sync, later). Never guessed.
     static func line(train: Bool, load: Bool, ship: Bool, isEgg: Bool, friendShipped: String? = nil, now: Date = Date()) -> String {
-        if isEgg { return "Big character. Zero receipts." }
-        if let f = friendShipped, !ship { return "\(f) shipped. You didn't." }
-        if train && load && ship { return "Alive. Screenshot it." }
-        let hour = LarpyTime.cal.component(.hour, from: now)
-        if hour < 12, !train { return "Gym's still a thought." }
-        if hour >= 18, !ship { return "I don't see a ship." }
-        if load, !ship { return "Tokens aren't a product." }
-        let day = LarpyTime.cal.ordinality(of: .day, in: .year, for: now) ?? 0
-        let lines = ship ? ["It exists. Now make it matter.", "One less thing trapped in your head.", "A receipt looks good on you.", "You earned the screenshot.", "The costume finally has a witness."]
-            : load ? ["Homework has a receipt. Your product doesn't.", "Inputs are full. The exit is empty.", "Nice load. Where's the payload.", "You fed the brain. Feed the market.", "The research phase has a door. Use it."]
-            : ["Your ambition called. It wants evidence.", "Main character. Missing scene.", "The idea can't screenshot itself.", "Dress the part. Then do the part.", "Your launch is still a rumour."]
-        return lines[day % lines.count]
+        if train && load && ship { return "Look at us go." }
+        if ship { return "You made something real." }
+        if train { return "A little stronger today." }
+        if load { return "A new idea to take with you." }
+        return "One small thing at a time."
     }
 
     /// Only output advances the weekly level.
@@ -392,7 +359,7 @@ extension QuestKind {
 /// LOAD = what the human loaded today (tokens / minutes / pages). Never model spend, never Ship.
 struct LoadEntry: Codable { var at: Date; var tokens: Int; var minutes: Int; var pages: Int; var lessons: Int?; var id: UUID? }
 
-final class LoadLedger: ObservableObject {
+@MainActor final class LoadLedger: ObservableObject {
     private let d = UserDefaults.standard
     @Published private(set) var entries: [LoadEntry] = []
 
@@ -408,8 +375,22 @@ final class LoadLedger: ObservableObject {
         d.set(try? JSONEncoder().encode(entries), forKey: "loadLedger")
     }
 
+    func syncUsage(_ usage: UsageDay) {
+        if entries.contains(where: { $0.id == usage.id && $0.tokens == usage.tokens }) { return }
+        entries.removeAll { $0.id == usage.id }
+        entries.append(LoadEntry(at: usage.at, tokens: usage.tokens, minutes: 0, pages: 0, lessons: 0, id: usage.id))
+        d.set(try? JSONEncoder().encode(entries), forKey: "loadLedger")
+    }
+
     var todays: [LoadEntry] { entries.filter { LarpyTime.cal.isDateInToday($0.at) } }
     var todayTokens: Int { todays.map(\.tokens).reduce(0, +) }
+    var usageSummary: String {
+        let synced = todays.filter { $0.id != nil }.map(\.tokens).reduce(0, +)
+        let manual = todays.filter { $0.id == nil }.map(\.tokens).reduce(0, +)
+        if synced > 0 && manual > 0 { return "\(fmtTokens(synced)) synced · \(fmtTokens(manual)) manual" }
+        if synced > 0 { return "\(fmtTokens(synced)) synced today" }
+        return "\(fmtTokens(manual)) manually logged"
+    }
     var todayMinutes: Int { todays.map(\.minutes).reduce(0, +) }
     var todayPages: Int { todays.map(\.pages).reduce(0, +) }
 
@@ -451,12 +432,11 @@ extension ProofStore {
     }
 
     func latestToday(for quest: QuestKind) -> ProofLog? {
-        guard doneToday(quest), let l = latestLog(for: quest) else { return nil }
-        return l
+        logs.first { $0.quest == quest && ProgressRules.countsForDay($0) && ($0.progressDay ?? LarpyTime.dayKey($0.createdAt)) == LarpyTime.dayKey() }
     }
 
     func logsOn(_ day: Date) -> [ProofLog] {
-        logs.filter { $0.isEligible && LarpyTime.cal.isDate($0.createdAt, inSameDayAs: day) }
+        logs.filter { $0.isEligible && ($0.progressDay ?? LarpyTime.dayKey($0.createdAt)) == LarpyTime.dayKey(day) }
     }
 
     /// One word from today's proof: focused / tokens / git / music / gym / learn / ship. One chip max.
@@ -605,6 +585,8 @@ final class Prefs: ObservableObject {
 
     @Published var baseID: String { didSet { d.set(baseID, forKey: "base") } }
     @Published var kitID: String { didSet { d.set(kitID, forKey: "kit") } }
+    @Published var selectedLookID: String { didSet { d.set(selectedLookID, forKey: "selectedLookID") } }
+    @Published var selectedSceneID: String { didSet { d.set(selectedSceneID, forKey: "selectedSceneID") } }
     @Published var blush: Bool { didSet { d.set(blush, forKey: "blush") } }
     @Published var name: String { didSet { d.set(name, forKey: "name") } }
     @Published var county: String { didSet { d.set(county, forKey: "county") } }
@@ -644,8 +626,9 @@ final class Prefs: ObservableObject {
     @Published var witnessSentDay: String { didSet { d.set(witnessSentDay, forKey: "witnessSentDay") } }
 
     init() {
-        isDark = d.bool(forKey: "isDark")            // default: light cream paper
-        Theme.isDark = d.bool(forKey: "isDark")
+        let darkMode = d.object(forKey: "isDark") as? Bool ?? true
+        isDark = darkMode
+        Theme.isDark = darkMode
         providerID = d.string(forKey: "provider") ?? "claude"
         shipping = d.string(forKey: "shipping") ?? ""
         inviteShown = d.bool(forKey: "inviteShown")
@@ -664,6 +647,8 @@ final class Prefs: ObservableObject {
         witnessSentDay = d.string(forKey: "witnessSentDay") ?? ""
         baseID = d.string(forKey: "base") ?? "cream"
         kitID = d.string(forKey: "kit") ?? "bare"        // default: no clothes. Costumes are Settings-only.
+        selectedLookID = d.string(forKey: "selectedLookID") ?? ""
+        selectedSceneID = d.string(forKey: "selectedSceneID") ?? ""
         blush = d.object(forKey: "blush") as? Bool ?? true
         name = d.string(forKey: "name") ?? "You"
         county = d.string(forKey: "county") ?? ""
@@ -1048,61 +1033,94 @@ struct ContentView: View {
     @StateObject private var agents = AgentStore()
     @StateObject private var keys = AgentKeys()
     @StateObject private var loads = LoadLedger()
+    @StateObject private var connections = ConnectionsStore()
+    @StateObject private var seasonalShop = SeasonalShop.shared
+    @StateObject private var plus = LarpyPlusStore.shared
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var dayRefresh = Date.now
     private let dayClock = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     @State private var tab = 0
     @State private var activeLane: QuestKind?
+    @State private var focusRequested = false
     @State private var showSettings = false
-    @State private var showAsk = false
     @State private var draft: ShareDraft?
+    @AppStorage("journeySetupDone") private var setupDone = false
+    @State private var showPeople = false
 
     var body: some View {
         TabView(selection: $tab) {
-            TodayView(store: store, prefs: prefs, loads: loads, circle: circle, active: $activeLane, onSettings: { showSettings = true })
+            home
                 .tabItem { Label("Today", systemImage: "sun.max.fill") }
                 .tag(0)
 
-            WeekView(store: store, prefs: prefs, keys: keys, agents: agents, loads: loads, onSettings: { showSettings = true })
-                .tabItem { Label("Week", systemImage: "calendar") }
+            LarpAreaView(store: store, prefs: prefs)
+                .tabItem { Label("Larp", systemImage: "chart.bar.xaxis") }
+                .tag(3)
+
+            ActivityCalendarView(store: store, embedded: true, onToday: { tab = 0 })
+                .tabItem { Label("Progress", systemImage: "calendar") }
                 .tag(1)
 
-            PeopleView(circle: circle, prefs: prefs, store: store, onSettings: { showSettings = true })
-                .tabItem { Label("People", systemImage: "person.2.fill") }
+            WardrobeView(store: store, prefs: prefs, embedded: true)
+                .tabItem { Label("My Larpy", systemImage: "tshirt.fill") }
                 .tag(2)
         }
+        .task { await seasonalShop.load() }
+        .task { await plus.load() }
         .onReceive(dayClock) { date in if !Calendar.current.isDate(dayRefresh, inSameDayAs: date) { dayRefresh = date; refreshAll() } }
         .id("\(prefs.isDark)-\(LarpyTime.dayKey(dayRefresh))")                                   // rebuild the tree when the theme flips
         .tint(Palette.gold)
+        .environmentObject(connections)
         .preferredColorScheme(prefs.isDark ? .dark : .light)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if store.storageUnreadable {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Your activity history couldn’t be opened.").font(.headline)
+                    Text("Your saved files haven’t been replaced. Close and reopen Larpy to try again.").font(.footnote)
+                }.foregroundStyle(Palette.text).padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Palette.card)
+                    .accessibilityElement(children: .combine)
+            }
+        }
         .alert("Receipt not saved", isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) {
             Button("OK") { store.errorMessage = nil }
         } message: { Text(store.errorMessage ?? "Try again.") }
         .sheet(isPresented: $showSettings) {
-            SettingsView(store: store, prefs: prefs, agents: agents, keys: keys)
+            SimpleSettingsView(store: store, prefs: prefs, loads: loads, agents: agents)
         }
-        .sheet(isPresented: $showAsk) { AskView(store: store, prefs: prefs) }
+        .fullScreenCover(isPresented: Binding(get: { !setupDone }, set: { if !$0 { setupDone = true } })) {
+            WelcomeCompanionView(prefs: prefs, store: store, loads: loads)
+        }
+        .sheet(isPresented: $showPeople) { TogetherView(store: store, circle: circle, prefs: prefs) }
         // No popups after a receipt. The day-one pill and the widget card live inline on Today.
         .sheet(item: $draft) { d in DraftSheet(draft: d, store: store, loads: loads) }
         #if DEBUG
         .onAppear {
             let args = ProcessInfo.processInfo.arguments
+            if args.contains("-skipSetup") { setupDone = true }
+            if args.contains("-openSetup") { setupDone = false }
             if args.contains("-openSettings") { DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { showSettings = true } }
-            if args.contains("-openAsk") { DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { showAsk = true } }
             if args.contains("-dark") { prefs.isDark = true }
             if args.contains("-light") { prefs.isDark = false }
             if args.contains("-tailCard") { prefs.widgetCardShown = false }
             if args.contains("-openWeek") { tab = 1 }
+            if args.contains("-openLarp") { tab = 3 }
             if args.contains("-openPeople") { tab = 2 }
+            if let index = args.firstIndex(of: "-qaUsageFolder"), args.indices.contains(index + 1) {
+                connections.connectUsage(folder: URL(fileURLWithPath: args[index + 1]), store: store, loads: loads)
+            }
         }
         #endif
         .onAppear {
             refreshAll()
             pickUpDraft()
+            connections.start(store: store, loads: loads)
             if prefs.firstReceiptAt == 0, let first = store.logs.filter(\.isEligible).map(\.createdAt).min() {
                 prefs.firstReceiptAt = first.timeIntervalSince1970
             }
+        }
+        .onReceive(FocusModel.shared.$breakRequested) { requested in
+            if requested { tab = 0; focusRequested = true }
         }
         .onChange(of: store.logs) { refreshAll() }
         .onChange(of: agents.weekTotal) { refreshAll() }
@@ -1110,9 +1128,13 @@ struct ContentView: View {
             guard phase == .active else { return }
             refreshAll()
             pickUpDraft()
+            connections.refresh(store: store, loads: loads)
+            FocusModel.shared.refresh()
+            Task { await plus.refresh() }
         }
         .onOpenURL { url in
             guard url.scheme == "larpy" else { return }
+            if url.host == "focus" { tab = 0; focusRequested = true; return }
             // larpy://draft — the share extension parked something
             if url.host == "draft" { pickUpDraft(); return }
             // larpy://join/CODE?n=Name&s=shipping — become each other's one slot
@@ -1121,7 +1143,7 @@ struct ContentView: View {
                 let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
                 let n = q.first { $0.name == "n" }?.value ?? "Friend"
                 let s = q.first { $0.name == "s" }?.value ?? ""
-                if circle.setFriend(code: code, name: n, shipping: s) { tab = 2 }
+                if circle.setFriend(code: code, name: n, shipping: s) { showPeople = true }
                 return
             }
             // larpy://log/body|learn|work
@@ -1133,6 +1155,11 @@ struct ContentView: View {
             default: break
             }
         }
+    }
+
+    private var home: some View {
+        CompanionHomeView(store: store, prefs: prefs, loads: loads, circle: circle,
+                          onSettings: { showSettings = true }, active: $activeLane, showFocus: $focusRequested, onCalendar: { tab = 1 }, onLarp: { tab = 3 })
     }
 
     private func refreshAll() {
@@ -1165,8 +1192,10 @@ private struct GearButton: View {
 
 // MARK: - Today
 
-/// Today is screenshot bait: LOAD top-left, Larpy huge on a cream stage, one number, one line, three rows.
+/// Today keeps the character and three actions readable at the user's chosen text size.
 private struct TodayView: View {
+    @AppStorage("careerPath") private var careerID = CareerPath.exploring.rawValue
+    private var career: CareerPath { CareerPath(rawValue: careerID) ?? .exploring }
     @ObservedObject var store: ProofStore
     @ObservedObject var prefs: Prefs
     @ObservedObject var loads: LoadLedger
@@ -1179,6 +1208,8 @@ private struct TodayView: View {
     @State private var feedSequence = 0
     @State private var fedLane = 0
     @State private var showWardrobe = false
+    @State private var showConnections = false
+    @EnvironmentObject private var connections: ConnectionsStore
     @State private var showShare = false
     @State private var shareImage: UIImage?
     @State private var lanesOpen = false
@@ -1186,13 +1217,19 @@ private struct TodayView: View {
     @State private var betDraft = ""
     @State private var forceTape = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var stackedControls: Bool { dynamicTypeSize >= .xxxLarge }
+    private var controlsLayout: AnyLayout {
+        stackedControls ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout())
+    }
 
     private var life: LifeState { LifeEngine.life(store.logs) }
     private var stats: WeekStats { LifeEngine.stats(store.logs) }
-    private var founderID: String? { store.logsOn(.now).first?.founderID }
-    private var sceneKit: Kit { SceneWardrobe.kit(for: store.logsOn(.now), fallback: prefs.kit) }
+    private var founderID: String? { CharacterStyle.lookID(logs: store.logs, selected: prefs.selectedLookID) }
+    private var sceneKit: Kit { FounderLook.find(founderID)?.kit ?? prefs.kit }
     private var todayScene: MovieScene {
-        MovieScene.forToday(store.logsOn(.now), allLogs: store.logs, workThisWeek: stats.workN, fallbackKit: sceneKit, paused: !Larp.wardrobeOpen(prefs: prefs))
+        CharacterStyle.scene(logs: store.logs, selected: prefs.selectedSceneID, kit: sceneKit)
     }
     private var friendShipped: String? {
         guard let f = circle.friend, let at = f.lastShipAt, LarpyTime.cal.isDateInToday(at) else { return nil }
@@ -1287,41 +1324,62 @@ private struct TodayView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                header
-                Text(headline)
-                    .font(.system(size: 26, weight: .medium, design: .serif)).tracking(-0.8)
-                    .foregroundStyle(Palette.text).lineLimit(3).minimumScaleFactor(0.85)
-                    .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 12).padding(.bottom, 12)
-                    .contentTransition(.opacity)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Build your next chapter.")
+                        .font(.system(.title2, design: .serif).weight(.medium)).tracking(-0.6)
+                        .foregroundStyle(Palette.text)
+                    Text(career == .exploring ? "Three small actions. A character that grows with you." : "Your path · \(career.title)")
+                        .font(.subheadline).foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 4).padding(.bottom, 14)
 
-                let stageHeight: CGFloat = 252
+                let stageHeight: CGFloat = 184
                 LarpyCharacterView(life: life, base: .cream, kit: sceneKit,
-                                   width: 150, scene: todayScene, sceneCorner: 28, interactive: true,
+                                   width: 124, scene: todayScene, sceneCorner: 24, interactive: true,
                                    fedTick: feedSequence, fedLane: fedLane, level: stats.workN, founderID: founderID)
                     .frame(maxWidth: .infinity).frame(height: stageHeight)
-                captionBlock
-
-                if !dayZero { weekBlock } else { dayZeroLevel }
-                witnessLine
-
-                if showsTape { fridayTape.padding(.top, 16) }
-                if asksForIntent { intentField.padding(.top, 14) }
-
-                rows.padding(.top, 14)
-                firstReceiptPill
-                tailCard
-            }.padding(.horizontal, 26).padding(.top, 6).padding(.bottom, 24)
+                controlsLayout {
+                    Text(FounderLook.find(founderID)?.styleName ?? "Your Larpy").font(.subheadline).foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !stackedControls { Spacer(minLength: 8) }
+                    Button { showWardrobe = true } label: {
+                        Label("Skins", systemImage: "tshirt")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
+                            .fixedSize(horizontal: false, vertical: true).frame(minHeight: 44)
+                    }.buttonStyle(ReceiptPressStyle())
+                }
+                NextSkinView(store: store) { showWardrobe = true }
+                controlsLayout {
+                    Text("What did you do today?").font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !stackedControls { Spacer() }
+                    Text("\(stats.todayCount) of 3").font(.subheadline).monospacedDigit().foregroundStyle(Palette.muted)
+                }.foregroundStyle(Palette.text).padding(.top, 8).padding(.bottom, 12)
+                rows
+                Text("One qualifying day per activity. Every earned skin stays yours.")
+                    .font(.footnote).foregroundStyle(Palette.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true).padding(.top, 12)
+                Button { showConnections = true } label: {
+                    HStack { Text("AI usage"); Spacer(); Text(loads.usageSummary); Image(systemName: "chevron.right") }
+                        .font(.subheadline).foregroundStyle(Palette.muted).frame(minHeight: 44)
+                }.padding(.top, 10)
+            }.padding(.horizontal, 22).padding(.top, 6).padding(.bottom, 24)
         }.scrollIndicators(.hidden)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            header.padding(.horizontal, 22).padding(.bottom, 8).background(Palette.bg)
+        }
         .background(Palette.bg.ignoresSafeArea())
+        .sheet(isPresented: $showConnections) { ConnectionsView(store: store, loads: loads) }
         .sheet(item: $active) { quest in
             LogSheet(quest: quest, store: store, loads: loads, prefillLoad: prefillLoad && quest == .learn, prefillNote: quest == .work ? prefillNote : "")
         }
         .sheet(isPresented: $showWardrobe) { WardrobeView(store: store, prefs: prefs) }
         #if DEBUG
-        // Screenshot hooks: `simctl launch <sim> com.larpy.app -openWardrobe` / `-openShare`. Debug builds only.
+        // Screenshot hooks: `simctl launch <sim> com.vano.larpy -openWardrobe` / `-openShare`. Debug builds only.
         .onAppear { if ProcessInfo.processInfo.arguments.contains("-openWardrobe") { showWardrobe = true } }
+        .onAppear { if ProcessInfo.processInfo.arguments.contains("-openConnections") { showConnections = true } }
         .onAppear { if ProcessInfo.processInfo.arguments.contains("-friday") { forceTape = true } }
         .onAppear {
             guard ProcessInfo.processInfo.arguments.contains("-openShare") else { return }
@@ -1369,19 +1427,11 @@ private struct TodayView: View {
     // MARK: pieces
 
     private var header: some View {
-        HStack(alignment: .center) {
-            Text(dateLine).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(2)
-                .foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
-            Spacer(minLength: 8)
+        controlsLayout {
+            Text("Today").font(.largeTitle.weight(.bold)).tracking(-1)
+                .foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.75)
+            if !stackedControls { Spacer(minLength: 8) }
             HStack(spacing: 2) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) { prefs.isDark.toggle() }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                } label: {
-                    Image(systemName: prefs.isDark ? "sun.max.fill" : "moon.fill")
-                        .font(.system(size: 17, weight: .medium)).foregroundStyle(Palette.muted)
-                        .frame(width: 44, height: 44).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityLabel(prefs.isDark ? "Switch to light" : "Switch to dark")
                 if stats.todayCount >= 1 {
                     Button { renderShare(); showShare = true } label: {
                         Image(systemName: "square.and.arrow.up")
@@ -1390,11 +1440,11 @@ private struct TodayView: View {
                     }.buttonStyle(.plain).accessibilityLabel("Share today")
                         .transition(reduceMotion ? .identity : .opacity)
                 }
-                GearButton(action: onSettings).frame(width: 44, height: 44)
+                GearButton(action: onSettings).frame(width: 44, height: 44).accessibilityLabel("Settings")
             }
         }
-        .frame(height: 44)
-        .animation(.easeOut(duration: 0.2), value: stats.todayCount)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: stats.todayCount)
     }
 
     @ViewBuilder private var captionBlock: some View {
@@ -1572,36 +1622,13 @@ private struct TodayView: View {
 
     @ViewBuilder private var rows: some View {
         VStack(spacing: 8) {
-            if returnDoor && !lanesOpen {
-                QuestRow(quest: .work, latest: nil, hint: QuestKind.work.emptyHint, flash: flashLane == .work) { prefillLoad = false; active = .work }
-                Button { withAnimation(.easeOut(duration: 0.22)) { lanesOpen = true } } label: {
-                    HStack(spacing: 10) {
-                        ForEach([QuestKind.body, .learn], id: \.self) { q in
-                            Circle().stroke(q.tint.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [2, 2])).frame(width: 9, height: 9)
-                        }
-                        Text("Body · Learnt").font(.system(size: 14, weight: .medium)).foregroundStyle(Palette.muted)
-                        Spacer()
-                        Text("+").font(.system(size: 18, weight: .medium)).foregroundStyle(Palette.muted)
-                    }.padding(.horizontal, 15).frame(minHeight: 40)
-                        .background(Palette.card.opacity(0.4), in: RoundedRectangle(cornerRadius: 14))
-                        .contentShape(RoundedRectangle(cornerRadius: 14))
-                }.buttonStyle(.plain).accessibilityLabel("Body and Learnt. Open the rows.")
-            } else if dayZero && !lanesOpen {
-                QuestRow(quest: .work, latest: nil, hint: QuestKind.work.emptyHint, flash: false) { prefillLoad = false; active = .work }
-                Button { withAnimation(.easeOut(duration: 0.22)) { lanesOpen = true } } label: {
-                    Text("Body and Learnt count too. Only Work changes the level.")
-                        .font(.system(size: 12)).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity).padding(.top, 6)
-                }.buttonStyle(.plain)
-            } else {
-                ForEach(QuestKind.allCases) { q in
+                ForEach([QuestKind.body, .work, .learn]) { q in
                     let latest = store.latestToday(for: q)
-                    let hint = q == .learn && latest == nil && loads.todayTokens > 0 ? "\(fmtTokens(loads.todayTokens)) tokens" : q.emptyHint
+                    let hint = q == .work ? career.work : q == .learn ? career.learn : "Record a workout or add a photo"
                     QuestRow(quest: q, latest: latest, hint: hint, flash: flashLane == q) {
-                        prefillLoad = q == .learn && loads.todayTokens == 0; prefillNote = ""; active = q
+                        prefillLoad = false; prefillNote = ""; active = q
                     }
                 }
-            }
         }
     }
 
@@ -1680,6 +1707,7 @@ private struct HandDrawnUnderline: Shape {
 }
 
 private struct QuestRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let quest: QuestKind
     let latest: ProofLog?
     var hint: String? = nil
@@ -1689,43 +1717,42 @@ private struct QuestRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                ZStack {
-                    Circle().stroke(isShip ? Palette.ink.opacity(0.3) : quest.tint.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: latest == nil ? [2, 2] : []))
-                    if latest != nil { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)) }
-                    else { Circle().fill(isShip ? Palette.ink : quest.tint).frame(width: 5, height: 5) }
-                }.frame(width: 25, height: 25).foregroundStyle(isShip ? Palette.ink : quest.tint)
+                Image(systemName: latest == nil ? quest.glyph : "checkmark.circle.fill")
+                    .font(.system(size: 21, weight: .medium))
+                    .frame(width: 30).foregroundStyle(isShip ? Palette.ink : Palette.text)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(quest.title).font(.system(size: 18, weight: .semibold))
-                    Text(latest.map { rowChip($0).isEmpty ? "photo attached" : rowChip($0) } ?? hint ?? "")
-                        .font(.system(size: 12, weight: .medium)).lineLimit(1)
+                    Text(quest.actionTitle).font(.headline)
+                    Text(quest == .learn && hint?.contains("tokens today") == true ? hint! : latest.map { "\($0.source == nil ? "Logged" : "Synced") · \(rowChip($0).isEmpty ? "Photo attached" : rowChip($0))" } ?? hint ?? "")
+                        .font(.subheadline).lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2).fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(isShip ? Palette.ink.opacity(0.72) : Palette.muted)
                 }
                 Spacer(minLength: 4)
-                Text(latest == nil ? (isShip ? "Add proof" : "+") : "+")
-                    .font(.system(size: isShip && latest == nil ? 12 : 20, weight: .medium))
+                Image(systemName: "plus").font(.system(size: 17, weight: .medium))
             }
             .foregroundStyle(isShip ? Palette.ink : Palette.text)
-            .padding(.horizontal, 15).frame(minHeight: 61)
+            .padding(.horizontal, 15).padding(.vertical, 12).frame(minHeight: 72)
             .background(isShip ? Palette.gold : Palette.card.opacity(0.65), in: RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(isShip ? Palette.gold : Palette.line, lineWidth: 1))
-            .overlay(RoundedRectangle(cornerRadius: 14).fill(quest.tint.opacity(flash ? 0.28 : 0)))
+            .overlay(RoundedRectangle(cornerRadius: 14).fill(Palette.gold.opacity(flash ? 0.28 : 0)))
             .contentShape(RoundedRectangle(cornerRadius: 14))
         }.buttonStyle(ReceiptPressStyle())
-            .accessibilityLabel("\(quest.title). \(latest == nil ? "No receipt today" : "Receipt logged"). Add receipt.")
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel("\(quest.actionTitle). \(latest == nil ? "No activity today" : "Activity logged"). \(hint ?? "")")
+            .accessibilityHint(latest == nil ? "Opens the form to save this activity." : "Opens the form to add another receipt.")
     }
 }
 private struct ReceiptPressStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
-            .opacity(configuration.isPressed ? 0.85 : 1).animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.85 : 1).animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }
 
 // MARK: - Log sheet (routes to per-lane content)
 
 /// Tap a lane → a sheet, never an instant check. Leave ONE receipt: a photo or one sentence.
-private struct LogSheet: View {
+struct LogSheet: View {
     let quest: QuestKind
     @ObservedObject var store: ProofStore
     @ObservedObject var loads: LoadLedger
@@ -1739,9 +1766,8 @@ private struct LogSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     HStack(alignment: .center) {
-                        Text(quest.title.uppercased())
-                            .font(.system(size: 13, weight: .semibold)).kerning(3)
-                            .foregroundStyle(quest == .work ? Palette.gold : quest.tint)
+                        Text(quest.actionTitle)
+                            .font(.headline).foregroundStyle(Palette.muted)
                         Spacer()
                         // The egg watches. It slumps while the field holds a sentence instead of a link.
                         LarpyCharacterView(life: rejecting ? .neutralAsleep : LifeEngine.life(store.logs), base: .cream,
@@ -1779,13 +1805,21 @@ private struct TrainContent: View {
     @AppStorage("bodyTimerStart") private var startValue: Double = 0
     @State private var endedAt: Date?
     @State private var showCamera = false
+    @State private var usePhotoLibrary = true
     @State private var note = ""
     @State private var error = ""
     private var start: Date? { startValue > 0 ? Date(timeIntervalSince1970: startValue) : nil }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Pic or it didn't happen.").font(.system(size: 27, design: .serif)).foregroundStyle(Palette.text)
-            BigButton("Attach a photo", icon: "camera.fill") { showCamera = true }
+            Text("Gym, a run, a walk.").font(.title.weight(.semibold)).foregroundStyle(Palette.text)
+            Text("Add a photo, or time your activity.").font(.body).foregroundStyle(Palette.muted)
+            Menu {
+                Button("Choose from Photos", systemImage: "photo") { usePhotoLibrary = true; showCamera = true }
+                Button("Take a photo", systemImage: "camera") { usePhotoLibrary = false; showCamera = true }
+            } label: {
+                Label("Add a photo", systemImage: "photo.on.rectangle").font(.headline).foregroundStyle(Palette.ink)
+                    .frame(maxWidth: .infinity, minHeight: 54).background(Palette.gold, in: Capsule())
+            }
             if let start {
                 TimelineView(.periodic(from: .now, by: 1)) { clock in
                     let secs = max(0, Int((endedAt ?? clock.date).timeIntervalSince(start)))
@@ -1796,25 +1830,26 @@ private struct TrainContent: View {
                         if endedAt == nil { SmallButton("Stop") { endedAt = .now } }
                         else { SmallButton("Restart") { startValue = Date().timeIntervalSince1970; endedAt = nil } }
                     }.foregroundStyle(Palette.text)
-                    Text(secs < 60 ? "One real minute before this counts." : "Time on the clock. Evidence on the page.")
+                    Text(secs < 600 ? "10 minutes earns an active day. Rest days are fine." : "This workout earns one active day.")
                         .font(.system(size: 12)).foregroundStyle(Palette.muted)
                     if let endedAt {
-                        BigButton("Log Body", icon: "checkmark") {
+                        BigButton("Save activity", icon: "checkmark") {
                             if store.logTimer(start: start, end: endedAt, note: note) {
                                 startValue = 0; done()
                             } else { error = store.errorMessage ?? "Try again." }
-                        }.disabled(secs < 60).opacity(secs < 60 ? 0.4 : 1)
+                        }.disabled(secs < 600).opacity(secs < 600 ? 0.4 : 1)
                     }
                 }
             } else {
                 SmallButton("Or start a timer") { startValue = Date().timeIntervalSince1970 }
             }
             NoteField(text: $note, placeholder: "gym / run / walk (optional)")
-            Text("A sentence doesn't move the body.").font(.system(size: 12)).foregroundStyle(Palette.muted)
+            VoiceNoteButton(text: $note)
+            Text("A 10-minute timer earns an active day. Photos are self-reported evidence.").font(.footnote).foregroundStyle(Palette.muted)
             if !error.isEmpty { Text(error).font(.system(size: 12)).foregroundStyle(Palette.train) }
         }
         .sheet(isPresented: $showCamera) {
-            CameraPicker { image in
+            CameraPicker(preferLibrary: usePhotoLibrary) { image in
                 guard let data = image?.jpegData(compressionQuality: 0.82) else { return }
                 do { try store.logPhoto(quest: .body, imageData: data, value: note.isEmpty ? "photo" : note); startValue = 0; done() }
                 catch { self.error = error.localizedDescription }
@@ -1824,11 +1859,12 @@ private struct TrainContent: View {
 }
 
 private struct LoadContent: View {
+    @AppStorage("careerPath") private var careerID = CareerPath.exploring.rawValue
     @ObservedObject var store: ProofStore
     @ObservedObject var loads: LoadLedger
     var prefill = false
     let done: () -> Void
-    @State private var mode = 0
+    @State private var mode = 1
     @State private var tokens = ""
     @State private var pages = ""
     @State private var url = ""
@@ -1843,23 +1879,37 @@ private struct LoadContent: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Homework. Own it.").font(.system(size: 28, design: .serif)).foregroundStyle(Palette.text)
-            Picker("Input", selection: $mode) { Text("Tokens").tag(0); Text("A lesson").tag(1) }
+            Text("What did you learn?").font(.title.weight(.semibold)).foregroundStyle(Palette.text)
+            Text((CareerPath(rawValue: careerID) ?? .exploring).learn).font(.subheadline).foregroundStyle(Palette.muted)
+            Picker("Input", selection: $mode) { Text("A lesson").tag(1); Text("AI usage").tag(0) }
                 .pickerStyle(.segmented)
             if mode == 0 {
-                TextField("184k", text: $tokens).font(.system(size: 46, design: .serif)).foregroundStyle(Palette.text)
+                Text("AI tokens used").font(.subheadline).foregroundStyle(Palette.muted)
+                TextField("e.g. 10k", text: $tokens).font(.system(size: 42, weight: .medium)).foregroundStyle(Palette.text)
                     .keyboardType(.numbersAndPunctuation).autocorrectionDisabled().textInputAutocapitalization(.never)
+                HStack(spacing: 10) {
+                    ForEach(["1k", "10k", "100k"], id: \.self) { amount in
+                        SmallButton(amount) { tokens = amount }
+                    }
+                }
                 NoteField(text: $title, placeholder: "Cursor / Claude / where it went (optional)")
-                Text("Human grind. Not Larpy's API bill.").font(.system(size: 12)).foregroundStyle(Palette.muted)
+                Text("Enter the count from your AI tool.").font(.footnote).foregroundStyle(Palette.muted)
             } else {
-                LinkField(text: $url, placeholder: "Video / book / deck link")
-                NoteField(text: $title, placeholder: "…or what you read")
-                LabeledNumber(text: $pages, unit: "pages · optional")
-                Text("What are you using this for?").font(.system(size: 17, weight: .semibold)).foregroundStyle(Palette.text)
-                NoteField(text: $use, placeholder: "One line. Make the input useful.")
+                Text("What was it about?").font(.headline).foregroundStyle(Palette.text)
+                TextField("A topic, book, video or conversation", text: $title)
+                    .textFieldStyle(.roundedBorder).submitLabel(.next)
+                Text("One thing you took away").font(.headline).foregroundStyle(Palette.text)
+                NoteField(text: $use, placeholder: "Something you can explain or try")
+                VoiceNoteButton(text: $use)
+                DisclosureGroup("Source & pages (optional)") {
+                    VStack(spacing: 12) {
+                        LinkField(text: $url, placeholder: "Link to the source", autoFocus: false)
+                        LabeledNumber(text: $pages, unit: "pages")
+                    }.padding(.top, 10)
+                }.foregroundStyle(Palette.muted)
             }
-            BigButton("Log learning", icon: "arrow.down") { save() }.disabled(!valid).opacity(valid ? 1 : 0.4)
-            Text("Tokens aren't a product. Only finished Work levels you up.").font(.system(size: 12)).foregroundStyle(Palette.muted)
+            BigButton(mode == 0 ? "Save usage" : "Save learning", icon: "checkmark") { save() }.disabled(!valid).opacity(valid ? 1 : 0.4)
+            Text(mode == 0 ? "Usage is a tracker. Tokens alone do not earn a learning day." : "A topic and your takeaway earn one learning day. Counted once per date.").font(.footnote).foregroundStyle(Palette.muted)
             if !error.isEmpty { Text(error).font(.system(size: 12)).foregroundStyle(Palette.train) }
         }
     }
@@ -1874,6 +1924,7 @@ private struct LoadContent: View {
 }
 
 private struct ShipContent: View {
+    @AppStorage("careerPath") private var careerID = CareerPath.exploring.rawValue
     @ObservedObject var store: ProofStore
     var prefillNote = ""
     @Binding var rejecting: Bool
@@ -1895,7 +1946,8 @@ private struct ShipContent: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Show me the thing.").font(.system(size: 29, design: .serif)).foregroundStyle(Palette.text)
+            Text("What did you make?").font(.title.weight(.semibold)).foregroundStyle(Palette.text)
+            Text((CareerPath(rawValue: careerID) ?? .exploring).work + ".").font(.body).foregroundStyle(Palette.muted)
             if clipboardHasURL, copiedLink == nil {
                 Button {
                     // User-initiated read. The system paste notice is the honest price of one tap.
@@ -1912,23 +1964,22 @@ private struct ShipContent: View {
                     .background(Palette.gold, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }.buttonStyle(.plain)
             }
-            LinkField(text: $url, placeholder: "PR / TestFlight / live post / launch URL", autoFocus: false)
+            LinkField(text: $url, placeholder: "Paste a link to your work", autoFocus: false)
             if showRejection {
-                Text("A sentence isn't a receipt. Paste the link or attach a screenshot.")
+                Text("Add a full link, or attach a screenshot below.")
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.ink)
                     .padding(.horizontal, 14).padding(.vertical, 9)
                     .background(Palette.gold.opacity(0.12), in: Capsule())
                     .transition(.opacity)
             }
             SmallButton("Attach a screenshot") { showCamera = true }
-            NoteField(text: $note, placeholder: "What left the building? (optional)")
-            BigButton(valid ? (repeatHost ? "Already counted. New link?" : "Log Work") : hasNote ? "Save to Learnt instead" : "Log Work", icon: "arrow.up.right") {
-                let shipped = valid
-                if store.logTextProof(quest: shipped ? .work : .learn, proofKind: shipped ? .link : .number,
-                                      value: shipped ? url : "note: \(note)", annotation: shipped ? note : nil) { done() }
+            NoteField(text: $note, placeholder: "What did you finish? (optional)")
+            VoiceNoteButton(text: $note)
+            BigButton("Save Work", icon: "checkmark") {
+                if store.logTextProof(quest: .work, proofKind: .link, value: url, annotation: note) { done() }
                 else { error = store.errorMessage ?? "Couldn't file this receipt." }
-            }.disabled(!valid && !hasNote).opacity(valid || hasNote ? 1 : 0.4)
-            Text("PR. Closed deal. Sent email. Something someone else can see.").font(.system(size: 12)).foregroundStyle(Palette.muted)
+            }.disabled(!valid).opacity(valid ? 1 : 0.4)
+            Text("Save as much as you like. Progress counts once per date.").font(.footnote).foregroundStyle(Palette.muted)
             if !error.isEmpty { Text(error).font(.system(size: 12)).foregroundStyle(Palette.train) }
         }
         .onAppear {
@@ -2124,7 +2175,7 @@ struct CameraPicker: UIViewControllerRepresentable {
 // MARK: - Week
 
 /// Seven days of proof, not analytics: a face per day, one line, optional agent sentence.
-private struct WeekView: View {
+struct WeekView: View {
     @ObservedObject var store: ProofStore
     @ObservedObject var prefs: Prefs
     @ObservedObject var keys: AgentKeys
@@ -2161,11 +2212,13 @@ private struct WeekView: View {
     }
 
     @MainActor private func renderShareCard() -> UIImage? {
-        let card = ShareCard(life: LifeEngine.life(store.logs), base: prefs.base, kit: SceneWardrobe.kit(for: store.logsOn(.now), fallback: prefs.kit),
+        let lookID = CharacterStyle.lookID(logs: store.logs, selected: prefs.selectedLookID)
+        let kit = FounderLook.find(lookID)?.kit ?? prefs.kit
+        let card = ShareCard(life: LifeEngine.life(store.logs), base: prefs.base, kit: kit,
                              name: prefs.name, loadLabel: fmtTokens(loads.todayTokens), ships: shipsThisWeek,
                              pips: QuestKind.allCases.map { store.doneToday($0) }, loadDetail: loads.todayDetail,
-                             founderID: store.logsOn(.now).first?.founderID,
-                             scene: MovieScene.forToday(store.logsOn(.now), allLogs: store.logs, workThisWeek: shipsThisWeek, fallbackKit: prefs.kit, paused: !Larp.wardrobeOpen))
+                             founderID: lookID,
+                             scene: CharacterStyle.scene(logs: store.logs, selected: prefs.selectedSceneID, kit: kit))
         let r = ImageRenderer(content: card)
         r.scale = 3
         return r.uiImage
@@ -2193,7 +2246,7 @@ private struct WeekView: View {
                         LarpyCharacterView(life: .neutralAsleep, base: prefs.base, blush: prefs.blush,
                                            kit: prefs.kit, width: 150, interactive: true)
                             .frame(height: 210)
-                        Text("No receipts. Still larping.")
+                        Text("Your next chapter starts with one activity.")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Palette.muted)
                     }
@@ -2358,7 +2411,7 @@ private struct FaceSlot: View {
     }
 }
 
-private struct DayDetail: View {
+struct DayDetail: View {
     let day: Date
     @ObservedObject var store: ProofStore
     private var room: String? {
@@ -2372,24 +2425,21 @@ private struct DayDetail: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(day.formatted(date: .abbreviated, time: .omitted))
                         .font(.system(size: 28, design: .serif)).foregroundStyle(Palette.text)
-                    if let room {
-                        Text(room.uppercased()).font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.6).foregroundStyle(Palette.muted)
-                    }
                 }
                 ForEach(QuestKind.allCases) { quest in
                     let receipts = store.logsOn(day).filter { $0.quest == quest }
-                    Text(quest.title.uppercased()).font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(2).foregroundStyle(quest == .work ? Palette.gold : quest.tint)
-                    if receipts.isEmpty { Text("The hole is still here.").font(.system(size: 13)).foregroundStyle(Palette.muted) }
+                    Text(quest.title).font(.headline).foregroundStyle(Palette.text)
+                    if receipts.isEmpty { Text("Nothing logged for this activity.").font(.subheadline).foregroundStyle(Palette.muted) }
                     ForEach(receipts) { log in
                         HStack(alignment: .top, spacing: 12) {
-                            RoundedRectangle(cornerRadius: 1.5).fill(quest == .work ? Palette.gold : quest.tint).frame(width: 3)
+                            RoundedRectangle(cornerRadius: 1.5).fill(Palette.gold).frame(width: 3)
                             VStack(alignment: .leading, spacing: 8) {
                                 if let url = store.photoURL(for: log), let image = UIImage(contentsOfFile: url.path) {
                                     Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 200).clipShape(RoundedRectangle(cornerRadius: 10))
                                 }
                                 if log.proofKind == .link, let url = ReceiptRules.webURL(log.value) {
-                                    Link(destination: url) { Label(log.value, systemImage: "arrow.up.right").font(.system(size: 13)).lineLimit(2) }.tint(Palette.text)
-                                } else { Text(log.value.replacingOccurrences(of: "note: ", with: "")).font(.system(size: 14)).foregroundStyle(Palette.text) }
+                                    Link(destination: url) { Label(log.value, systemImage: "arrow.up.right").font(.subheadline).lineLimit(2) }.tint(Palette.text)
+                                } else { Text(log.value.replacingOccurrences(of: "note: ", with: "")).font(.body).foregroundStyle(Palette.text) }
                                 if let use = log.annotation, !use.isEmpty {
                                     Text(use).font(.system(size: 14, design: .serif)).foregroundStyle(Palette.muted)
                                 }
@@ -2423,7 +2473,7 @@ private struct PeopleView: View {
                     Text("One friend.\nKeep each other honest.")
                         .font(.system(size: 30, weight: .medium, design: .serif)).tracking(-1).foregroundStyle(Palette.text)
                     Spacer(minLength: 8)
-                    GearButton(action: onSettings).frame(width: 44, height: 44)
+                    GearButton(action: onSettings).frame(width: 44, height: 44).accessibilityLabel("Settings")
                 }
                 Button { showProfile = true } label: {
                     HStack(spacing: 15) {
@@ -2611,6 +2661,20 @@ enum ShareInbox {
     static let suite = WidgetBridge.suite
     struct Input: Codable { var id: UUID; var url: String?; var text: String?; var use: String; var at: Date }
     @MainActor static func importLoads(store: ProofStore, loads: LoadLedger) {
+        if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: suite) {
+            let folder = container.appendingPathComponent("LearningInbox", isDirectory: true)
+            for file in (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [] where file.pathExtension == "json" {
+                guard let data = try? Data(contentsOf: file), let input = try? JSONDecoder().decode(Input.self, from: data) else { continue }
+                let isLink = input.url.map { isValidURL($0) } ?? false
+                let value = isLink ? input.url! : "note: " + (input.text ?? "Shared learning")
+                if store.logTextProof(quest: .learn, proofKind: isLink ? .link : .number, value: value,
+                                      annotation: input.use, id: input.id, createdAt: input.at) {
+                    loads.add(lessons: 1, at: input.at, id: input.id)
+                    try? FileManager.default.removeItem(at: file)
+                }
+            }
+        }
+        // Import any queue left by earlier app versions as well.
         guard let defaults = UserDefaults(suiteName: suite), let data = defaults.data(forKey: "incomingLoads"),
               let queue = try? JSONDecoder().decode([Input].self, from: data) else { return }
         var remaining: [Input] = []
@@ -2755,17 +2819,8 @@ struct DraftSheet: View {
 
 // MARK: - Widget bridge (App Group snapshot: mood + pips + ships + last receipt — nothing else)
 
-struct WidgetSnapshot: Codable {
-    var mood: String        // "fed" | "hungry"
-    var pips: [Bool]        // Train, Load, Ship today
-    var ships: Int          // this week
-    var lastReceipt: String
-    var name: String
-    var updatedAt: Date
-}
-
 enum WidgetBridge {
-    static let suite = "group.com.larpy.app"
+    static let suite = "group.com.vano.larpy"
 
     @MainActor
     static func write(store: ProofStore, prefs: Prefs) {
@@ -2773,7 +2828,8 @@ enum WidgetBridge {
         let last = store.logs.first.map { "\($0.quest.title) · \(summaryChip($0))" } ?? ""
         let snap = WidgetSnapshot(mood: store.todayCount > 0 ? "fed" : "hungry",
                                   pips: QuestKind.allCases.map { store.doneToday($0) },
-                                  ships: s.workN, lastReceipt: last, name: prefs.name, updatedAt: .now)
+                                  ships: s.workN, lastReceipt: last, name: prefs.name, updatedAt: .now,
+                                  totalXP: LarpProgress.earned(store.logs, calendar: LarpyTime.cal).xp)
         UserDefaults(suiteName: suite)?.set(try? JSONEncoder().encode(snap), forKey: "snapshot")
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -2918,17 +2974,10 @@ struct SettingsView: View {
     @ObservedObject var keys: AgentKeys
     @Environment(\.dismiss) private var dismiss
     @State private var confirmSignOut = false
-    @State private var showAsk = false
+    @State private var showAppearance = false
 
     private var rowFont: Font { .system(size: 16, weight: .medium) }
     private var hasShipped: Bool { store.logs.contains { $0.quest == .work && $0.isEligible } }
-    private var wardrobeLine: String {
-        if Larp.unlocked { return "Yours. It never renews." }
-        if !Larp.wardrobeOpen { return "Paused. Looks and rooms are holding." }
-        if let days = Larp.daysLeft { return days == 0 ? "Last free day." : "Free for \(days) more day\(days == 1 ? "" : "s")." }
-        return "Free. The first receipt starts the month."
-    }
-
     var body: some View {
         NavigationStack {
             List {
@@ -2956,17 +3005,14 @@ struct SettingsView: View {
                             .foregroundStyle(Palette.muted)
                             .frame(maxWidth: 180)
                     }
-                    HStack {
-                        Text("Costume").font(.system(size: 14)).foregroundStyle(Palette.muted)
-                        Spacer()
-                        Picker("", selection: Binding(
-                            get: { Costume.from(kit: prefs.kit).rawValue },
-                            set: { prefs.kitID = (Costume(rawValue: $0) ?? .hoodie).kit.rawValue })) {
-                            ForEach(Costume.allCases) { c in Text(c.label).tag(c.rawValue) }
-                        }
-                        .pickerStyle(.menu)
-                        .tint(Palette.gold)
-                    }
+                    Button { showAppearance = true } label: {
+                        HStack {
+                            Text("Outfit & scene").font(.system(size: 14)).foregroundStyle(Palette.muted)
+                            Spacer()
+                            Text("Customize").foregroundStyle(Palette.text)
+                            Image(systemName: "chevron.right").foregroundStyle(Palette.muted)
+                        }.frame(minHeight: 44)
+                    }.buttonStyle(.plain)
                     HStack {
                         Text("Icon").font(.system(size: 14)).foregroundStyle(Palette.muted)
                         Spacer()
@@ -2983,28 +3029,13 @@ struct SettingsView: View {
                 .frame(minHeight: 44)
                 .listRowBackground(Palette.card)
 
-                // 2b · Wardrobe: the only thing for sale, reached from here and the paused card. Never automatic.
-                Button { showAsk = true } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Wardrobe").font(rowFont).foregroundStyle(Palette.text)
-                            Text(wardrobeLine).font(.system(size: 11)).foregroundStyle(Palette.muted)
-                        }
-                        Spacer()
-                        Text(Larp.unlocked ? "Kept" : Larp.fallbackPrice + " once").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.gold)
-                    }
-                    .frame(minHeight: 44)
-                }
-                .buttonStyle(.plain)
-                .listRowBackground(Palette.card)
-
                 // 3 · Agents
                 NavigationLink {
                     AgentsView(prefs: prefs, keys: keys)
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Agents").font(rowFont).foregroundStyle(Palette.text)
+                            Text("Optional AI features").font(rowFont).foregroundStyle(Palette.text)
                             Text("Your own key. A model reads your week when you ask.").font(.system(size: 11)).foregroundStyle(Palette.muted)
                         }
                         Spacer()
@@ -3085,7 +3116,7 @@ struct SettingsView: View {
             .background(Palette.bg.ignoresSafeArea())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showAsk) { AskView(store: store, prefs: prefs) }
+            .sheet(isPresented: $showAppearance) { WardrobeView(store: store, prefs: prefs) }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }.tint(Palette.gold)
@@ -3179,7 +3210,7 @@ struct AgentsView: View {
 
 enum ShipLevel {
     static func title(_ ships: Int) -> String {
-        switch ships { case 0: "larping"; case 1..<3: "first proof"; case 3..<7: "repeat offender"; default: "real enough" }
+        switch ships { case 0: "ready to begin"; case 1..<3: "first steps"; case 3..<7: "finding a rhythm"; default: "showing up" }
     }
     static func next(_ ships: Int) -> Int { ships < 1 ? 1 : ships < 3 ? 3 : 7 }
 }
@@ -3219,6 +3250,7 @@ struct LarpyCharacterView: View {
     var fedLane = 0
     var level = 0
     var founderID: String? = nil
+    var companion = false
     private var founder: FounderLook? { FounderLook.find(founderID) }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -3235,17 +3267,20 @@ struct LarpyCharacterView: View {
         }
         .onChange(of: fedTick) { _, _ in fedAt = .now }
         .onChange(of: kit) { _, _ in enteredAt = .now }
+        .onChange(of: reduceMotion) { _, _ in resetInteraction() }
+        .onChange(of: scenePhase) { _, phase in if phase != .active { resetInteraction() } }
+        .onDisappear { resetInteraction() }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Larpy. \(hungry ? "Hungry" : "Fed"). \(founder?.title ?? Costume.from(kit: kit).label). \(ShipLevel.title(level)).")
+        .accessibilityLabel("Larpy. \(hungry ? "Resting" : "Ready"). \(founder?.title ?? Costume.from(kit: kit).label). \(ShipLevel.title(level)).")
     }
 
     private func stage(at date: Date) -> some View {
-        let moving = interactive && !reduceMotion
+        let moving = interactive && !reduceMotion && scenePhase == .active
         let t = moving ? date.timeIntervalSince(enteredAt) : 3.0
         let phase = max(0, t).truncatingRemainder(dividingBy: 12)
-        let entrance = moving ? min(1, max(0, t) / 0.28) : 1
-        let walking = kit == .rollneck && !hungry && phase < 2.4
-        let walk = walking ? sin(phase / 2.4 * .pi) : 0
+        let walking = moving && (companion || kit == .rollneck) && !hungry && phase < 4.0
+        let walk = walking ? sin(phase / 4.0 * .pi * 2) : 0
+        let wave = moving && companion && phase > 7.5 && phase < 9.2
         let sinceFeed = date.timeIntervalSince(fedAt)
         let squash = moving && sinceFeed >= 0 && sinceFeed < 0.65 ? sin(sinceFeed / 0.65 * .pi) : 0
         let sincePoke = date.timeIntervalSince(touchedAt)
@@ -3261,13 +3296,13 @@ struct LarpyCharacterView: View {
                     .frame(width: w * 0.85, height: w * 0.075)
                     .blur(radius: w * 0.018).offset(y: w * 0.58)
             }
-            actor(w: w, blink: blink, phase: phase)
+            actor(w: w, blink: blink, phase: phase, greeting: companion && (wave || poke > 0 || squash > 0 || life.cleared))
                 .scaleEffect(x: 1 + breathe + squash * 0.12 + poke * 0.045,
                              y: (hungry ? 0.91 : 1) + breathe - squash * 0.13 + poke * 0.045, anchor: .bottom)
-                .rotationEffect(.degrees((hungry ? -4 : 0) + (life.posture == .upright ? 0 : sway) + (walking ? -3 * sin(phase * 10) : 0)), anchor: .bottom)
+                .rotationEffect(.degrees((hungry ? -4 : 0) + (life.posture == .upright ? 0 : sway) + (walking ? -5 * sin(phase * 10) : 0)), anchor: .bottom)
                 .scaleEffect(life.growScale, anchor: .bottom)
                 .offset(y: life.posture == .sofa ? w * 1.10 * 0.05 : 0)
-                .offset(x: walk * w * 0.15 + drag.width, y: -abs(sin(phase * 8)) * (walking ? w * 0.025 : 0) + drag.height)
+                .offset(x: walk * w * (companion ? 0.19 : 0.15) + (moving ? drag.width : 0), y: -abs(sin(phase * 8)) * (walking ? w * 0.025 : 0) + (moving ? drag.height : 0))
             if showScene && level >= 7 {
                 Image(systemName: "sparkle").font(.system(size: w * 0.10, weight: .light))
                     .foregroundStyle(Palette.gold).offset(x: w * 0.52, y: -w * 0.35)
@@ -3303,56 +3338,74 @@ struct LarpyCharacterView: View {
         .gesture(DragGesture(minimumDistance: 5).onChanged { value in
             guard interactive && !reduceMotion else { return }
             drag = CGSize(width: max(-24, min(24, value.translation.width * 0.3)), height: max(-18, min(18, value.translation.height * 0.3)))
-        }.onEnded { _ in withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) { drag = .zero } })
+        }.onEnded { _ in withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { drag = .zero } }, including: companion ? .none : .all)
     }
 
-    private func actor(w: CGFloat, blink: Bool, phase: Double) -> some View {
+    private func resetInteraction() {
+        drag = .zero
+        fedAt = .distantPast
+        touchedAt = .distantPast
+    }
+
+    private func actor(w: CGFloat, blink: Bool, phase: Double, greeting: Bool) -> some View {
         let h = w * 1.10
         let clothed = kit == .hoodie || kit == .tee || kit == .rollneck || kit == .collar
         let cloth = founder?.color ?? (kit == .hoodie ? Color(hex: 0x666D69) : kit == .tee || kit == .collar ? Color(hex: 0xE4DED2) : Palette.ink)
         return ZStack {
+            if founder?.detail == "vampire" || founder?.detail == "captain" {
+                Path { p in
+                    p.move(to: CGPoint(x: w * 0.25, y: 0)); p.addLine(to: CGPoint(x: w * 0.75, y: 0))
+                    p.addLine(to: CGPoint(x: w * 1.18, y: w * 0.85)); p.addQuadCurve(to: CGPoint(x: -w * 0.18, y: w * 0.85), control: CGPoint(x: w * 0.5, y: w * 0.66)); p.closeSubpath()
+                }.fill(founder?.detail == "vampire" ? Color(hex: 0x852F35) : Color(hex: 0x364F66))
+                    .frame(width: w, height: w * 0.85).offset(y: h * 0.2)
+            }
             // Stubby limbs. Same silhouette for every character.
             ForEach([-1.0, 1.0], id: \.self) { side in
-                Capsule().fill(Palette.creature)
+                Capsule().fill(clothed ? cloth : Palette.creature)
                     .overlay(Capsule().stroke(Palette.ink.opacity(0.65), lineWidth: w * 0.009))
                     .frame(width: w * 0.14 * life.bodyTone, height: w * 0.29)
-                    .rotationEffect(.degrees(side * (hungry ? -12 : -28)))
-                    .offset(x: side * w * 0.46, y: h * 0.20)
-                Capsule().fill(Palette.creature)
+                    .rotationEffect(.degrees(side * (greeting ? -125 + sin(phase * 14) * 12 : hungry ? -12 : -28) + (companion && interactive && phase < 4 ? sin(phase * 10) * 14 : 0)))
+                    .offset(x: side * w * 0.46, y: h * (greeting ? 0.04 : 0.20))
+                Capsule().fill(clothed ? Color(hex: 0x393C39) : Palette.creature)
                     .overlay(Capsule().stroke(Palette.ink.opacity(0.65), lineWidth: w * 0.009))
                     .frame(width: w * 0.20, height: w * 0.13)
-                    .rotationEffect(.degrees(side * (life.posture == .sofa ? 25 : 12)))
+                    .rotationEffect(.degrees(side * (life.posture == .sofa ? 25 : 12) + (companion && interactive && phase < 4 ? sin(phase * 10 + side * .pi / 2) * 18 : 0)))
                     .offset(x: side * w * (life.posture == .upright ? 0.25 : 0.23), y: h * 0.48)
             }
-            EggShape().fill(Palette.creature)
+            EggShape().fill(LinearGradient(colors: [Color(hex: 0xFFF1D8), Palette.creature, Color(hex: 0xEAD4B0)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .overlay(EggShape().stroke(Palette.ink.opacity(0.8), lineWidth: max(0.7, w * 0.009)))
                 .frame(width: w, height: h)
                 .shadow(color: Palette.ink.opacity(0.07), radius: w * 0.03, y: w * 0.025)
             if clothed {
-                Rectangle().fill(cloth)
-                    .frame(width: w, height: h * 0.30)
-                    .offset(y: h * 0.40)
+                Rectangle().fill(LinearGradient(colors: [cloth, cloth.opacity(0.85), cloth], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: w, height: h * 0.40)
+                    .offset(y: h * 0.35)
                     .mask(EggShape().frame(width: w, height: h))
+                CurveLine(bend: 0.15).stroke(Palette.ink.opacity(0.22), lineWidth: w * 0.007)
+                    .frame(width: w * 0.64, height: w * 0.035).offset(y: h * 0.45)
                 if kit == .rollneck {
-                    Capsule().fill(cloth).frame(width: w * 0.62, height: w * 0.045).offset(y: h * 0.26)
+                    Capsule().fill(cloth).frame(width: w * 0.64, height: w * 0.055).offset(y: h * 0.18)
                 }
                 if kit == .hoodie {
                     HStack(spacing: w * 0.20) {
                         Capsule().fill(Palette.creature).frame(width: w * 0.012, height: w * 0.09)
                         Capsule().fill(Palette.creature).frame(width: w * 0.012, height: w * 0.09)
-                    }.offset(y: h * 0.31)
+                    }.offset(y: h * 0.23)
+                    RoundedRectangle(cornerRadius: w * 0.04).stroke(Palette.ink.opacity(0.28), lineWidth: w * 0.008)
+                        .frame(width: w * 0.33, height: h * 0.08).offset(y: h * 0.37)
                 }
                 if kit == .collar {
                     HStack(spacing: 0) {
                         Triangle().fill(Color.white).frame(width: w * 0.16, height: w * 0.11)
                         Triangle().fill(Color.white).frame(width: w * 0.16, height: w * 0.11)
-                    }.offset(y: h * 0.29)
-                    Capsule().fill(Palette.gold).frame(width: w * 0.035, height: w * 0.12).offset(y: h * 0.37)
+                    }.offset(y: h * 0.19)
                 }
             }
             if let founder {
                 garmentDetail(founder.detail, w: w, h: h)
-                if !["walk", "board", "phone", "laptop"].contains(founder.prop) {
+                if ["camera", "microphone", "dumbbell", "notebook"].contains(founder.prop) {
+                    RewardProp(prop: founder.prop, width: w).offset(x: w * 0.36, y: h * 0.31)
+                } else if !["walk", "board", "phone", "laptop"].contains(founder.prop) {
                     RoundedRectangle(cornerRadius: w * 0.025).fill(Color(hex: 0xE1C9A6))
                         .overlay(RoundedRectangle(cornerRadius: w * 0.025).stroke(Palette.ink.opacity(0.8), lineWidth: w * 0.008))
                         .overlay { Image(systemName: propSymbol(founder.prop)).font(.system(size: w * 0.10, weight: .regular)).foregroundStyle(Palette.ink) }
@@ -3371,15 +3424,35 @@ struct LarpyCharacterView: View {
                 Ellipse().fill(Palette.blush.opacity(hungry ? 0.46 : 0.72)).frame(width: w * 0.18, height: w * 0.105)
             }.offset(y: h * 0.035)
             HStack(spacing: w * 0.23) {
-                eye(w, blink: blink); eye(w, blink: blink)
+                if greeting {
+                    ForEach(0..<2) { _ in
+                        CurveLine(bend: -0.5).stroke(Palette.ink, style: StrokeStyle(lineWidth: w * 0.018, lineCap: .round))
+                            .frame(width: w * 0.085, height: w * 0.06)
+                    }
+                } else {
+                    eye(w, blink: blink); eye(w, blink: blink)
+                }
             }.offset(x: kit == .rollneck && phase < 2.4 ? w * 0.02 : 0, y: -h * 0.065)
-            CurveLine(bend: hungry ? -0.10 : life.face == .stirring ? 0.12 : 0.72)
+            // Small brows give the same egg a readable mood before the user reads a label.
+            if w >= 60 {
+                HStack(spacing: w * 0.24) {
+                    ForEach(0..<2) { _ in
+                        CurveLine(bend: hungry ? 0.18 : life.face == .stirring ? -0.22 : 0.42)
+                            .stroke(Palette.ink.opacity(hungry || life.face == .stirring ? 0.85 : 0.58),
+                                    style: StrokeStyle(lineWidth: max(0.8, w * 0.012), lineCap: .round))
+                            .frame(width: w * 0.11, height: w * 0.045)
+                    }
+                }
+                .rotationEffect(.degrees(hungry ? 0 : -3))
+                .offset(x: life.face == .stirring ? w * 0.012 : 0, y: -h * 0.16)
+            }
+            CurveLine(bend: greeting ? 0.9 : hungry ? -0.10 : life.face == .stirring ? 0.12 : 0.72)
                 .stroke(Palette.ink, style: StrokeStyle(lineWidth: max(1, w * 0.016), lineCap: .round))
-                .frame(width: w * 0.12, height: w * 0.06).offset(y: h * 0.11)
+                .frame(width: w * (companion ? 0.16 : 0.12), height: w * 0.06).offset(y: h * 0.11)
             if level >= 3 && clothed {
                 Circle().fill(Palette.gold).frame(width: w * 0.035, height: w * 0.035).offset(x: -w * 0.24, y: h * 0.34)
             }
-            if kit == .hoodie && level > 0 && (founder == nil || founder?.prop == "laptop") {
+            if kit == .hoodie && (founder?.prop == "laptop" || (founder == nil && level > 0)) {
                 RoundedRectangle(cornerRadius: w * 0.025).fill(Color(hex: 0xA8AAA4))
                     .overlay(RoundedRectangle(cornerRadius: w * 0.025).stroke(Palette.ink, lineWidth: w * 0.008))
                     .overlay { Text(">_").font(.system(size: w * 0.055, weight: .bold, design: .monospaced)).foregroundStyle(Palette.ink) }
@@ -3396,6 +3469,46 @@ struct LarpyCharacterView: View {
 
     @ViewBuilder private func garmentDetail(_ detail: String, w: CGFloat, h: CGFloat) -> some View {
         switch detail {
+        case "pumpkin":
+            Ellipse().fill(Color(hex: 0xCE6B30)).overlay(Ellipse().stroke(Palette.ink, lineWidth: w * 0.009))
+                .frame(width: w * 0.81, height: w * 0.29).offset(y: -h * 0.40)
+            ForEach([-1.0, 1.0], id: \.self) { side in
+                Triangle().fill(Palette.ink).frame(width: w * 0.09, height: w * 0.07).offset(x: side * w * 0.14, y: -h * 0.41)
+            }
+            Capsule().fill(Color(hex: 0x58704A)).frame(width: w * 0.07, height: w * 0.12).rotationEffect(.degrees(12)).offset(y: -h * 0.56)
+        case "wizard", "scholar":
+            Triangle().fill(detail == "wizard" ? Color(hex: 0x344D60) : Color(hex: 0x667345))
+                .overlay(Triangle().stroke(Palette.ink, lineWidth: w * 0.009))
+                .frame(width: w * 0.65, height: w * 0.40).rotationEffect(.degrees(-10)).offset(y: -h * 0.48)
+            Capsule().fill(detail == "wizard" ? Color(hex: 0x344D60) : Color(hex: 0x667345)).frame(width: w * 0.95, height: w * 0.075).rotationEffect(.degrees(-7)).offset(y: -h * 0.31)
+            Image(systemName: "star.fill").font(.system(size: w * 0.10)).foregroundStyle(Palette.gold).offset(x: -w * 0.05, y: -h * 0.44)
+        case "vampire":
+            HStack(spacing: w * 0.09) { ForEach(0..<2) { _ in Triangle().fill(Color.white).frame(width: w * 0.035, height: w * 0.04).rotationEffect(.degrees(180)) } }.offset(y: h * 0.14)
+            Image(systemName: "moon.fill").font(.system(size: w * 0.14)).foregroundStyle(Color(hex: 0xC79D61)).offset(x: -w * 0.17, y: h * 0.30)
+        case "champion":
+            Capsule().fill(Palette.gold).frame(width: w * 0.72, height: w * 0.065).offset(y: -h * 0.30)
+            Path { p in p.move(to: .zero); p.addLine(to: CGPoint(x: w * 0.13, y: w * 0.19)); p.addLine(to: CGPoint(x: w * 0.26, y: 0)) }.stroke(Color(hex: 0xC25D41), lineWidth: w * 0.04).frame(width: w * 0.26, height: w * 0.19).offset(y: h * 0.29)
+            Circle().fill(Palette.gold).overlay(Circle().stroke(Palette.ink, lineWidth: w * 0.006)).frame(width: w * 0.13).offset(y: h * 0.37)
+        case "captain":
+            Image(systemName: "bolt.fill").font(.system(size: w * 0.21, weight: .heavy)).foregroundStyle(Palette.gold).offset(y: h * 0.31)
+        case "blazer":
+            Path { p in
+                p.move(to: CGPoint(x: w * 0.24, y: 0)); p.addLine(to: CGPoint(x: w * 0.43, y: w * 0.14)); p.addLine(to: CGPoint(x: w * 0.36, y: w * 0.03)); p.closeSubpath()
+                p.move(to: CGPoint(x: w * 0.60, y: 0)); p.addLine(to: CGPoint(x: w * 0.44, y: w * 0.26)); p.addLine(to: CGPoint(x: w * 0.53, y: w * 0.03)); p.closeSubpath()
+            }.fill(Color(hex: 0x233E54)).frame(width: w * 0.85, height: w * 0.27).offset(y: h * 0.29)
+            RoundedRectangle(cornerRadius: w * 0.006).fill(Color(hex: 0xEEE7D8)).frame(width: w * 0.105, height: w * 0.025).rotationEffect(.degrees(-6)).offset(x: -w * 0.23, y: h * 0.28)
+            Circle().fill(Color(hex: 0xC4A35A)).frame(width: w * 0.027).offset(x: -w * 0.02, y: h * 0.40)
+        case "athletic":
+            Capsule().fill(Color(hex: 0xF4EAD1)).frame(width: w * 0.68, height: w * 0.058).rotationEffect(.degrees(-4)).offset(y: -h * 0.29)
+            Text("10").font(.system(size: w * 0.15, weight: .heavy, design: .rounded)).foregroundStyle(Color(hex: 0xF4EAD1)).offset(x: -w * 0.1, y: h * 0.30)
+        case "photographer":
+            Rectangle().fill(Color(hex: 0x3F3930)).frame(width: w * 0.035, height: h * 0.37).rotationEffect(.degrees(-36)).offset(x: w * 0.07, y: h * 0.31)
+            RoundedRectangle(cornerRadius: w * 0.02).stroke(Color(hex: 0x704C3E), lineWidth: w * 0.008).frame(width: w * 0.14, height: w * 0.10).offset(x: -w * 0.23, y: h * 0.30)
+        case "broadcast":
+            Path { p in p.addArc(center: CGPoint(x: w * 0.5, y: w * 0.4), radius: w * 0.44, startAngle: .degrees(195), endAngle: .degrees(345), clockwise: false) }
+                .stroke(Color(hex: 0x303B40), style: StrokeStyle(lineWidth: w * 0.055, lineCap: .round)).frame(width: w, height: w * 0.5).offset(y: -h * 0.21)
+            HStack { Capsule().fill(Color(hex: 0x303B40)).frame(width: w * 0.09, height: w * 0.19); Spacer(); Capsule().fill(Color(hex: 0x303B40)).frame(width: w * 0.09, height: w * 0.19) }
+                .frame(width: w * 0.99).offset(y: -h * 0.02)
         case "round-glasses":
             HStack(spacing: w * 0.14) {
                 Circle().stroke(Palette.ink, lineWidth: w * 0.01).frame(width: w * 0.16, height: w * 0.16)
@@ -3445,7 +3558,7 @@ struct Triangle: Shape {
         var p = Path(); p.move(to: CGPoint(x: r.minX, y: r.minY)); p.addLine(to: CGPoint(x: r.midX, y: r.maxY)); p.addLine(to: CGPoint(x: r.maxX, y: r.minY)); p.closeSubpath(); return p
     }
 }
-private struct EggShape: Shape {
+struct EggShape: Shape {
     func path(in r: CGRect) -> Path {
         var p = Path()
         p.move(to: CGPoint(x: r.midX, y: r.minY))
@@ -3464,7 +3577,7 @@ enum Feedback {
     /// Empty until the app has an App Store ID. The row hides itself until then.
     static let appStoreID = ""
     /// Where 'Ask for something' goes. Set this before TestFlight.
-    static let address = "hello@larpy.app"
+    static let address = "vano1app@gmail.com"
 
     static func rate() {
         guard !appStoreID.isEmpty, let url = URL(string: "https://apps.apple.com/app/id\(appStoreID)?action=write-review") else { return }
@@ -3494,7 +3607,7 @@ enum LarpyReminders {
 
     @MainActor
     static func refresh(store: ProofStore, agents: AgentStore) {
-        UNUserNotificationCenter.current().setBadgeCount(max(0, 3 - store.todayCount))
+        UNUserNotificationCenter.current().setBadgeCount(0)
         scheduleReminders(store: store, agents: agents)
     }
 
@@ -3541,9 +3654,12 @@ enum LarpyReminders {
         }
         d.set(today, forKey: "pingLastDay")
 
-        let n = max(0, 3 - store.todayCount)
-        if !store.doneToday(.body) { add(center, id: "larpy.1000", hour: 10, minute: 0, body: "Body?", badge: n) }
-        if !store.doneToday(.work) { add(center, id: "larpy.1800", hour: 18, minute: 0, body: "Work?", badge: n) }
+        let personality = CompanionPersonality(rawValue: d.string(forKey: "companionPersonality") ?? "") ?? .buddy
+        let bodyLine = personality == .roast ? "Your gym arc called. One small move?" : personality == .coach ? "Make time for a little movement today." : "A little movement, when you’re ready."
+        let workLine = personality == .roast ? "Big founder energy. Got a little evidence?" : personality == .coach ? "What did you finish today? Save your progress." : "Made something today? Save a little progress."
+        let n = 0
+        if !store.doneToday(.body) { add(center, id: "larpy.1000", hour: 10, minute: 0, body: bodyLine, badge: n) }
+        if !store.doneToday(.work) { add(center, id: "larpy.1800", hour: 18, minute: 0, body: workLine, badge: n) }
         print("[Larpy] 10:00 → \(store.doneToday(.body) ? "-" : "Body?") | 18:00 → \(store.doneToday(.work) ? "-" : "Ship?")")
     }
 

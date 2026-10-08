@@ -27,6 +27,14 @@ enum QuestKind: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    var actionTitle: String {
+        switch self {
+        case .body: "Body"
+        case .work: "Work"
+        case .learn: "Learnt"
+        }
+    }
+
     /// Receipt placeholder in the lane's sheet.
     var receiptPlaceholder: String {
         switch self {
@@ -39,9 +47,9 @@ enum QuestKind: String, CaseIterable, Codable, Identifiable {
     /// Empty-row subtitle on Today.
     var emptyHint: String {
         switch self {
-        case .body: "Photo, or a 60-second timer."
-        case .learn: "Token count, or a link and what it's for."
-        case .work: "A live link or a screenshot."
+        case .body: "Add a photo or start a timer"
+        case .learn: "Log AI tokens, a book or a lesson"
+        case .work: "Add a link or screenshot"
         }
     }
 
@@ -77,6 +85,9 @@ struct ProofLog: Identifiable, Codable, Equatable {
     var timerSeconds: Int?
     /// The room Larpy stood in when this landed. Old receipts have none and fall back to the lane's first room.
     var sceneID: String?
+    var source: String?
+    /// Local date when recorded. Travelling later must not split or merge earned days.
+    var progressDay: String?
     var createdAt: Date
 
     init(
@@ -90,6 +101,8 @@ struct ProofLog: Identifiable, Codable, Equatable {
         annotation: String? = nil,
         timerSeconds: Int? = nil,
         sceneID: String? = nil,
+        source: String? = nil,
+        progressDay: String? = nil,
         createdAt: Date = .now
     ) {
         self.id = id
@@ -102,7 +115,78 @@ struct ProofLog: Identifiable, Codable, Equatable {
         self.annotation = annotation
         self.timerSeconds = timerSeconds
         self.sceneID = sceneID
+        self.source = source
+        self.progressDay = progressDay
         self.createdAt = createdAt
+    }
+}
+
+/// A cumulative daily total. Re-importing the same id replaces the total, never adds it twice.
+struct UsageDay: Codable {
+    let id: UUID
+    let source: String
+    let at: Date
+    let tokens: Int
+    var sourceLabel: String { source == "codex" ? "Codex" : "Claude Code" }
+    func valid(now: Date = .now) -> Bool {
+        ["codex", "claude-code"].contains(source) && tokens > 0 && tokens <= 10_000_000_000
+            && at <= now.addingTimeInterval(300) && at > now.addingTimeInterval(-32 * 86_400)
+    }
+}
+
+struct UsageSnapshot: Codable {
+    let version: Int
+    let generatedAt: Date
+    let sources: [String]
+    let days: [UsageDay]
+}
+
+/// Display-only usage. Reading historical totals must never award historical XP.
+struct WeeklyUsageSummary {
+    let total: Int
+    let bySource: [String: Int]
+    let generatedAt: Date
+    let weekStart: Date
+    var sourceLabel: String {
+        if bySource.count == 2 { return "Codex + Claude Code" }
+        return bySource["codex"] != nil ? "Codex" : "Claude Code"
+    }
+    var compact: String {
+        if total >= 1_000_000_000 { return String(format: "%.1fB", Double(total) / 1_000_000_000).replacingOccurrences(of: ".0B", with: "B") }
+        if total >= 1_000_000 { return String(format: "%.1fM", Double(total) / 1_000_000).replacingOccurrences(of: ".0M", with: "M") }
+        if total >= 1_000 { return String(format: "%.1fk", Double(total) / 1_000).replacingOccurrences(of: ".0k", with: "k") }
+        return String(total)
+    }
+    func freshness(now: Date = .now) -> String {
+        let minutes = max(0, Int(now.timeIntervalSince(generatedAt) / 60))
+        if minutes < 1 { return "Updated just now" }
+        if minutes < 15 { return "Updated \(minutes)m ago" }
+        if minutes < 60 { return "Saved · \(minutes)m ago" }
+        if minutes < 1440 { return "Saved · \(minutes / 60)h ago" }
+        return "Saved · \(minutes / 1440)d ago"
+    }
+    static func from(_ snapshot: UsageSnapshot, now: Date = .now) -> WeeklyUsageSummary? {
+        // Exporter groups by Dublin day. Keep that same boundary while travelling.
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Dublin")!
+        calendar.firstWeekday = 2; calendar.minimumDaysInFirstWeek = 4
+        guard snapshot.version == 1, snapshot.days.count <= 200,
+              snapshot.generatedAt <= now.addingTimeInterval(300),
+              let week = calendar.dateInterval(of: .weekOfYear, for: now),
+              snapshot.generatedAt >= week.start else { return nil }
+        let sources = Set(snapshot.sources).intersection(["codex", "claude-code"])
+        guard !sources.isEmpty else { return nil }
+        var daily: [String: UsageDay] = [:]
+        for day in snapshot.days where sources.contains(day.source) && day.valid(now: now)
+            && day.at >= week.start && day.at < week.end {
+            // One Mac snapshot has one cumulative value per source/day. Do not sum duplicates.
+            let key = "\(day.source):\(calendar.startOfDay(for: day.at).timeIntervalSince1970)"
+            if day.tokens > (daily[key]?.tokens ?? -1) { daily[key] = day }
+        }
+        var totals = Dictionary(uniqueKeysWithValues: sources.map { ($0, 0) })
+        for day in daily.values { totals[day.source, default: 0] += day.tokens }
+        return WeeklyUsageSummary(total: totals.values.reduce(0, +), bySource: totals,
+                                  generatedAt: snapshot.generatedAt, weekStart: week.start)
     }
 }
 
