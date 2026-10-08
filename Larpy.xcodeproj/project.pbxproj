@@ -31,8 +31,10 @@
 		1B66E0B000000000C3A00002 /* LarpyPrimary@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B66E0A000000000C3A00002 /* LarpyPrimary@3x.png */; };
 		1B66E0B000000000C3A00003 /* LarpyHungry@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B66E0A000000000C3A00003 /* LarpyHungry@2x.png */; };
 		1B66E0B000000000C3A00004 /* LarpyHungry@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B66E0A000000000C3A00004 /* LarpyHungry@3x.png */; };
+		74A88DDE932F77F2772B528C /* LarpyHungry@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = E2849115DD1FA295FE6429C1 /* LarpyHungry@2x~ipad.png */; };
 		1B66E0B000000000C3A00005 /* LarpyRollneck@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B66E0A000000000C3A00005 /* LarpyRollneck@2x.png */; };
 		1B66E0B000000000C3A00006 /* LarpyRollneck@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B66E0A000000000C3A00006 /* LarpyRollneck@3x.png */; };
+		65A0373C77A985E552F722EC /* LarpyRollneck@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = F1C5F440810D289A83370E56 /* LarpyRollneck@2x~ipad.png */; };
 		ABCD20260905000000000001 /* FounderWardrobe.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20260905000000000002; };
 		ABCD20260906000000000001 /* Larp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20260906000000000002; };
 		1B66F20000000000C3A00004 /* FocusMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B66F20000000000C3A00002 /* FocusMonitor.swift */; };
@@ -86,8 +88,10 @@
 		1B66E0A000000000C3A00002 /* LarpyPrimary@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "LarpyPrimary@3x.png"; path = "AppIcons/LarpyPrimary@3x.png"; sourceTree = "<group>"; };
 		1B66E0A000000000C3A00003 /* LarpyHungry@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "LarpyHungry@2x.png"; path = "AppIcons/LarpyHungry@2x.png"; sourceTree = "<group>"; };
 		1B66E0A000000000C3A00004 /* LarpyHungry@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "LarpyHungry@3x.png"; path = "AppIcons/LarpyHungry@3x.png"; sourceTree = "<group>"; };
+		E2849115DD1FA295FE6429C1 /* LarpyHungry@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "LarpyHungry@2x~ipad.png"; path = "AppIcons/LarpyHungry@2x~ipad.png"; sourceTree = "<group>"; };
 		1B66E0A000000000C3A00005 /* LarpyRollneck@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "LarpyRollneck@2x.png"; path = "AppIcons/LarpyRollneck@2x.png"; sourceTree = "<group>"; };
 		1B66E0A000000000C3A00006 /* LarpyRollneck@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "LarpyRollneck@3x.png"; path = "AppIcons/LarpyRollneck@3x.png"; sourceTree = "<group>"; };
+		F1C5F440810D289A83370E56 /* LarpyRollneck@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "LarpyRollneck@2x~ipad.png"; path = "AppIcons/LarpyRollneck@2x~ipad.png"; sourceTree = "<group>"; };
 		ABCD20260905000000000002 /* FounderWardrobe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FounderWardrobe.swift; sourceTree = "<group>"; };
 		ABCD20260906000000000002 /* Larp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Larp.swift; sourceTree = "<group>"; };
 		1B66F20000000000C3A00001 /* LarpyFocusMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LarpyFocusMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -296,8 +300,10 @@
 				1B66E0A000000000C3A00002 /* LarpyPrimary@3x.png */,
 				1B66E0A000000000C3A00003 /* LarpyHungry@2x.png */,
 				1B66E0A000000000C3A00004 /* LarpyHungry@3x.png */,
+				E2849115DD1FA295FE6429C1 /* LarpyHungry@2x~ipad.png */,
 				1B66E0A000000000C3A00005 /* LarpyRollneck@2x.png */,
 				1B66E0A000000000C3A00006 /* LarpyRollneck@3x.png */,
+				F1C5F440810D289A83370E56 /* LarpyRollneck@2x~ipad.png */,
 			);
 			name = AppIcons;
 			sourceTree = "<group>";
@@ -514,8 +520,10 @@
 				1B66E0B000000000C3A00002 /* LarpyPrimary@3x.png in Resources */,
 				1B66E0B000000000C3A00003 /* LarpyHungry@2x.png in Resources */,
 				1B66E0B000000000C3A00004 /* LarpyHungry@3x.png in Resources */,
+				74A88DDE932F77F2772B528C /* LarpyHungry@2x~ipad.png in Resources */,
 				1B66E0B000000000C3A00005 /* LarpyRollneck@2x.png in Resources */,
 				1B66E0B000000000C3A00006 /* LarpyRollneck@3x.png in Resources */,
+				65A0373C77A985E552F722EC /* LarpyRollneck@2x~ipad.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -786,7 +794,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Larpy/Larpy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				ENABLE_PREVIEWS = YES;
@@ -818,7 +826,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Larpy/Larpy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				ENABLE_PREVIEWS = YES;
@@ -849,7 +857,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LarpyWidget/LarpyWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyWidget/Info.plist;
@@ -876,7 +884,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LarpyWidget/LarpyWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyWidget/Info.plist;
@@ -903,7 +911,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LarpyShare/LarpyShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyShare/Info.plist;
@@ -930,7 +938,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LarpyShare/LarpyShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyShare/Info.plist;
@@ -958,7 +966,7 @@
 				CODE_SIGN_ENTITLEMENTS = LarpyFocusMonitor/LarpyFocusMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyFocusMonitor/Info.plist;
@@ -986,7 +994,7 @@
 				CODE_SIGN_ENTITLEMENTS = LarpyFocusMonitor/LarpyFocusMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyFocusMonitor/Info.plist;
@@ -1014,7 +1022,7 @@
 				CODE_SIGN_ENTITLEMENTS = LarpyFocusShield/LarpyFocusShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyFocusShield/Info.plist;
@@ -1042,7 +1050,7 @@
 				CODE_SIGN_ENTITLEMENTS = LarpyFocusShield/LarpyFocusShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyFocusShield/Info.plist;
@@ -1070,7 +1078,7 @@
 				CODE_SIGN_ENTITLEMENTS = LarpyFocusAction/LarpyFocusAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyFocusAction/Info.plist;
@@ -1098,7 +1106,7 @@
 				CODE_SIGN_ENTITLEMENTS = LarpyFocusAction/LarpyFocusAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 36RZ9VDHBC;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LarpyFocusAction/Info.plist;
