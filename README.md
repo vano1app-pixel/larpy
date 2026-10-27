@@ -1,3 +1,11 @@
+# Current release status — 27 October 2026
+
+**Build 7 uploaded and processed VALID; not publicly released.** Progress now reuses one summary per render and the companion pauses animation when hidden. 230 Swift checks and five Python tests pass; simulator saving, history, week navigation, outfit preview, unavailable Plus offer and free-timer cancellation were checked. All six archive signatures and required entitlements verify.
+
+Apple rejected the previous build-6 review. The exact rejection message is behind App Store Connect sign-in and must be read before correction/resubmission. Physical-device Screen Time and remote Sandbox purchases remain unverified. See [release evidence and remaining gates](RELEASE-2026-10-27.md).
+
+## Previous release history
+
 # Current release status — 7 October 2026
 
 **App 1.0 (4) is Waiting for Review; Larpy Plus was not included.** App Privacy is published. An external submission occurred while the first subscription/group attachment was being prepared. Permission to withdraw and correct it is pending, along with owner bank/tax and physical-device checks. The exact build is signed and ready to install on the connected iPhone once it is unlocked. See [current submission status](SUBMISSION-2026-10-07.md).
