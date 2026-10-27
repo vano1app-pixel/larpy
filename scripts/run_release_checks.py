@@ -11,6 +11,7 @@ PROGRESSION = "Larpy/Progression.swift"
 SUITES = {
     "receipts": [MODEL, "Tests/ReceiptRulesChecks.swift"],
     "progression": [MODEL, PROGRESSION, "Tests/ProgressionChecks.swift"],
+    "progress-summary": [MODEL, PROGRESSION, "Shared/FocusSession.swift", "Tests/ProgressSummaryChecks.swift"],
     "calendar": [MODEL, PROGRESSION, "Tests/CalendarChecks.swift"],
     "friend-snapshots": [MODEL, PROGRESSION, "Tests/FriendSnapshotChecks.swift"],
     "levels": [MODEL, PROGRESSION, "Larpy/Leveling.swift", "Tests/LevelingChecks.swift"],
@@ -31,7 +32,12 @@ def main():
             script = Path(folder) / (name + ".swift")
             script.write_text("\n".join((ROOT / source).read_text() for source in sources))
             print("Running " + name, flush=True)
-            subprocess.run(["swift", str(script)], check=True, cwd=ROOT)
+            if name == "progress-summary":
+                executable = Path(folder) / name
+                subprocess.run(["swiftc", "-parse-as-library", str(script), "-o", str(executable)], check=True, cwd=ROOT)
+                subprocess.run([str(executable)], check=True, cwd=ROOT)
+            else:
+                subprocess.run(["swift", str(script)], check=True, cwd=ROOT)
     if "usage" in selected:
         subprocess.run(["python3", "-m", "unittest", "discover", "-s", "Tests", "-p", "test_usage_sync.py"], check=True, cwd=ROOT)
 

@@ -3257,25 +3257,27 @@ struct LarpyCharacterView: View {
     @State private var fedAt = Date.distantPast
     @State private var touchedAt = Date.distantPast
     @State private var enteredAt = Date.now
+    @State private var isVisible = false
     @State private var drag: CGSize = .zero
 
     private var hungry: Bool { life.face == .asleep }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !interactive || reduceMotion || scenePhase != .active)) { clock in
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !interactive || !isVisible || reduceMotion || scenePhase != .active)) { clock in
             stage(at: interactive && !reduceMotion ? clock.date : .distantPast)
         }
         .onChange(of: fedTick) { _, _ in fedAt = .now }
         .onChange(of: kit) { _, _ in enteredAt = .now }
         .onChange(of: reduceMotion) { _, _ in resetInteraction() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { resetInteraction() } }
-        .onDisappear { resetInteraction() }
+        .onAppear { isVisible = true }
+        .onDisappear { isVisible = false; resetInteraction() }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Larpy. \(hungry ? "Resting" : "Ready"). \(founder?.title ?? Costume.from(kit: kit).label). \(ShipLevel.title(level)).")
     }
 
     private func stage(at date: Date) -> some View {
-        let moving = interactive && !reduceMotion && scenePhase == .active
+        let moving = interactive && isVisible && !reduceMotion && scenePhase == .active
         let t = moving ? date.timeIntervalSince(enteredAt) : 3.0
         let phase = max(0, t).truncatingRemainder(dividingBy: 12)
         let walking = moving && (companion || kit == .rollneck) && !hungry && phase < 4.0

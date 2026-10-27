@@ -538,12 +538,12 @@ struct ActivityCalendarView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     private var cal: Calendar { LarpyTime.cal }
-    private var summary: ActivityProgressSummary {
+    private func makeSummary() -> ActivityProgressSummary {
         ActivityProgressSummary(logs: store.logs,
             weekContaining: cal.date(byAdding: .weekOfYear, value: weekOffset, to: refreshDate)!,
             calendar: cal, now: refreshDate)
     }
-    private var focusMinutes: Int? {
+    private func focusMinutes(_ summary: ActivityProgressSummary) -> Int? {
         // The existing focus store retains 32 days, not lifetime timer history.
         guard summary.weekStart >= cal.date(byAdding: .day, value: -31, to: cal.startOfDay(for: refreshDate))!,
               let defaults = FocusStorage.shared else { return nil }
@@ -554,16 +554,18 @@ struct ActivityCalendarView: View {
         (cal.range(of: .day, in: .month, for: month) ?? 1..<2).compactMap { cal.date(byAdding: .day, value: $0 - 1, to: month) }
     }
     private var weekTitle: String { weekOffset == 0 ? "This week" : weekOffset == -1 ? "Last week" : "Your week" }
-    private var weekRange: String {
+    private func weekRange(_ summary: ActivityProgressSummary) -> String {
         let last = cal.date(byAdding: .day, value: -1, to: summary.weekEnd)!
         return "\(summary.weekStart.formatted(.dateTime.day().month(.abbreviated))) – \(last.formatted(.dateTime.day().month(.abbreviated).year()))"
     }
 
     var body: some View {
+        // Reuse one snapshot across the overview, streak and history in this render.
+        let summary = makeSummary()
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    weeklyOverview
+                    weeklyOverview(summary)
                     Button { showReview = true } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 5) {
@@ -573,8 +575,8 @@ struct ActivityCalendarView: View {
                             Spacer(); Image(systemName: "arrow.up.right")
                         }.padding(.vertical, 10).frame(minHeight: 44).contentShape(Rectangle())
                     }.buttonStyle(.plain)
-                    streak
-                    history
+                    streak(summary)
+                    history(summary)
                     DisclosureGroup("Month view") { monthView.padding(.top, 12) }
                         .font(.subheadline.weight(.medium))
                     DisclosureGroup("What counts?") {
@@ -600,12 +602,12 @@ struct ActivityCalendarView: View {
         .onChange(of: scenePhase) { _, phase in if phase == .active { refreshDate = .now } }
     }
 
-    private var weeklyOverview: some View {
+    private func weeklyOverview(_ summary: ActivityProgressSummary) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(weekTitle).font(.system(.largeTitle, design: .serif))
-                    Text(weekRange).font(.subheadline).foregroundStyle(Palette.muted)
+                    Text(weekRange(summary)).font(.subheadline).foregroundStyle(Palette.muted)
                 }
                 Spacer(minLength: 4)
                 Button { weekOffset -= 1 } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
@@ -622,7 +624,7 @@ struct ActivityCalendarView: View {
                 Text("\(summary.activeDays) active days").font(.title)
             }.accessibilityElement(children: .combine)
             VStack(spacing: 14) {
-                measure("Recorded focus", value: focusMinutes.map { "\($0) min" } ?? "—", icon: "timer")
+                measure("Recorded focus", value: focusMinutes(summary).map { "\($0) min" } ?? "—", icon: "timer")
                 measure("Work days", value: "\(summary.workDays)", icon: "hammer")
                 measure("Movement days", value: "\(summary.bodyDays)", icon: "figure.walk")
                 measure("Learning days", value: "\(summary.learningDays)", icon: "book.closed")
@@ -651,7 +653,7 @@ struct ActivityCalendarView: View {
         }.accessibilityElement(children: .combine)
     }
 
-    private var streak: some View {
+    private func streak(_ summary: ActivityProgressSummary) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Divider()
             ViewThatFits(in: .horizontal) {
@@ -671,7 +673,7 @@ struct ActivityCalendarView: View {
         }
     }
 
-    private var history: some View {
+    private func history(_ summary: ActivityProgressSummary) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("What you did").font(.system(.title2, design: .serif))
             if summary.history.isEmpty {
