@@ -2,7 +2,7 @@
 
 **Build 7 uploaded and processed VALID; not publicly released.** Progress now reuses one summary per render and the companion pauses animation when hidden. 230 Swift checks and five Python tests pass; simulator saving, history, week navigation, outfit preview, unavailable Plus offer and free-timer cancellation were checked. All six archive signatures and required entitlements verify.
 
-Apple rejected the previous build-6 review. The exact rejection message is behind App Store Connect sign-in and must be read before correction/resubmission. Physical-device Screen Time and remote Sandbox purchases remain unverified. See [release evidence and remaining gates](RELEASE-2026-10-27.md).
+Apple rejected build 6 because the subscription did not load on iPad. The authenticated Business page shows Paid Apps Agreement **Pending User Info**, missing tax information, banking processing and a new developer agreement needing account-holder acceptance. Build 7 is now installed and launches on the owner's iPhone, with version readback verified. Physical-device Screen Time and remote Sandbox purchases remain unverified. The four local purchase tests failed in StoreKit test-service setup, so no current purchase-test pass is claimed. See [release evidence and remaining gates](RELEASE-2026-10-27.md).
 
 ## Previous release history
 
