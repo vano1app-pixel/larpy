@@ -12,7 +12,9 @@ enum LarpyLinks {
 @MainActor
 final class LarpyPlusStore: ObservableObject {
     static let shared = LarpyPlusStore()
-    nonisolated static let productID = "com.vano.larpy.plus.weekly"
+    nonisolated static let productID = "com.vano.larpy.plus.monthly"
+    // Keep verified legacy access while only offering the current monthly plan.
+    nonisolated static let entitlementProductIDs: Set<String> = [productID, "com.vano.larpy.plus.weekly"]
     @Published private(set) var product: Product?
     @Published private(set) var active = false
     @Published private(set) var accessUntil: Date?
@@ -28,7 +30,7 @@ final class LarpyPlusStore: ObservableObject {
         updates = Task { [weak self] in
             for await result in StoreKit.Transaction.updates {
                 guard let self, case .verified(let transaction) = result,
-                      transaction.productID == Self.productID else { continue }
+                      Self.entitlementProductIDs.contains(transaction.productID) else { continue }
                 self.apply(transaction)
                 await self.refresh()
                 await transaction.finish()
@@ -64,7 +66,7 @@ final class LarpyPlusStore: ObservableObject {
         var trialEligible = false
         for await result in StoreKit.Transaction.currentEntitlements {
             guard case .verified(let transaction) = result,
-                  transaction.productID == Self.productID,
+                  Self.entitlementProductIDs.contains(transaction.productID),
                   transaction.revocationDate == nil, !transaction.isUpgraded,
                   let date = transaction.expirationDate, date > .now else { continue }
             until = max(until ?? date, date)
@@ -74,7 +76,7 @@ final class LarpyPlusStore: ObservableObject {
             trialEligible = await subscription.isEligibleForIntroOffer
             for status in (try? await subscription.status) ?? [] where status.state == .inGracePeriod {
                 guard case .verified(let transaction) = status.transaction,
-                      transaction.productID == Self.productID, transaction.revocationDate == nil,
+                      Self.entitlementProductIDs.contains(transaction.productID), transaction.revocationDate == nil,
                       case .verified(let renewal) = status.renewalInfo,
                       let date = renewal.gracePeriodExpirationDate, date > .now else { continue }
                 until = max(until ?? date, date)
@@ -87,7 +89,7 @@ final class LarpyPlusStore: ObservableObject {
 
     private func apply(_ transaction: StoreKit.Transaction) {
         refreshGeneration += 1
-        guard transaction.productID == Self.productID else { return }
+        guard Self.entitlementProductIDs.contains(transaction.productID) else { return }
         setAccess(transaction.revocationDate == nil && !transaction.isUpgraded ? transaction.expirationDate : nil)
     }
 

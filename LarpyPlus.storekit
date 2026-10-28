@@ -8,12 +8,12 @@
     "localizations": [],
     "name": "Larpy Plus",
     "subscriptions": [{
-      "adHocOffers": [], "codeOffers": [], "displayPrice": "2.00", "familyShareable": false,
-      "groupNumber": 1, "internalID": "LARPYWEEKLYQA",
-      "introductoryOffer": { "internalID": "LARPYMONTHTRIALQA", "paymentMode": "free", "subscriptionPeriod": "P1M" },
-      "localizations": [{ "description": "Weekly activity comparisons, summaries and next steps.", "displayName": "Larpy Plus — weekly", "locale": "en_GB" }],
-      "productID": "com.vano.larpy.plus.weekly", "recurringSubscriptionPeriod": "P1W",
-      "referenceName": "Larpy Plus Weekly QA", "subscriptionGroupID": "larpy-plus-qa", "type": "RecurringSubscription"
+      "adHocOffers": [], "codeOffers": [], "displayPrice": "3.99", "familyShareable": false,
+      "groupNumber": 1, "internalID": "LARPYMONTHLYQA",
+      "introductoryOffer": { "internalID": "LARPYWEEKTRIALQA", "paymentMode": "free", "subscriptionPeriod": "P1W" },
+      "localizations": [{ "description": "Weekly activity comparisons, summaries and next steps.", "displayName": "Larpy Plus Monthly", "locale": "en_GB" }],
+      "productID": "com.vano.larpy.plus.monthly", "recurringSubscriptionPeriod": "P1M",
+      "referenceName": "Larpy Plus Monthly QA", "subscriptionGroupID": "larpy-plus-qa", "type": "RecurringSubscription"
     }]
   }],
   "version": { "major": 4, "minor": 0 }

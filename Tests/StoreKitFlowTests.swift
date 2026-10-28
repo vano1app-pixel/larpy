@@ -17,15 +17,15 @@ final class StoreKitFlowTests: XCTestCase {
             "Xcode StoreKit test service did not accept configuration; purchase tests cannot run safely without dialog control")
     }
 
-    func testWeeklyTrialPurchaseRestoreAndExpiry() async throws {
+    func testMonthlyTrialPurchaseRestoreAndExpiry() async throws {
         let session = try session()
         defer { session.clearTransactions() }
         let store = LarpyPlusStore()
         await store.load()
         let product = try XCTUnwrap(store.product)
         XCTAssertFalse(product.displayPrice.isEmpty)
-        XCTAssertEqual(store.billingLength, "1 week")
-        XCTAssertEqual(store.trialLength, "1 month")
+        XCTAssertEqual(store.billingLength, "1 month")
+        XCTAssertEqual(store.trialLength, "1 week")
         XCTAssertFalse(store.active)
         await store.purchase()
         XCTAssertTrue(store.active, store.message ?? "Purchase did not activate Plus")
