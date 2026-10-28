@@ -12,7 +12,7 @@ from asc_request import request
 
 APP = "6819279029"
 VERSION = "05a2207b-2359-46aa-8d7b-4c56ba5314d9"
-NOTES = """Larpy Plus: eligible new subscribers get one month free, then the weekly price shown by Apple (EUR 2.00/week in Ireland). TestFlight purchases use Apple's test environment.
+NOTES = """Larpy Plus Monthly: eligible new subscribers get seven days free, then the monthly price shown by Apple (EUR 3.99/month in Ireland). Product: com.vano.larpy.plus.monthly. TestFlight purchases use Apple's no-charge test environment.
 
 Please test on a physical iPhone:
 1. Launch, finish onboarding, log Body / Work / Learnt, view saved activities and run the free timer.
@@ -21,7 +21,7 @@ Please test on a physical iPhone:
 4. Open the weekly review, save a reflection, and verify saved notes remain available when Plus expires.
 5. Check Health workout import, calendar, share extension, widgets, iPad layout and larger text. Report any crash or unclear wording with the device and iOS version.
 
-Known verification boundary: purchase, restore and refund were checked with Xcode StoreKit. Remote Sandbox and physical-device blocking still require this test pass. No account or server login is needed."""
+Known verification boundary: build 8 loaded the new monthly product and opened Apple's sign-in prompt in the simulator. A completed remote Sandbox purchase/restore and physical-device blocking still require this test pass. No Larpy account or server login is needed. Earlier local Xcode StoreKit results concern the previous weekly product and do not verify the monthly release."""
 
 parser = argparse.ArgumentParser()
 parser.add_argument("build")
